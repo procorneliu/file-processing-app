@@ -11,7 +11,7 @@ function SearchBar({ ref, query, onQuery }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(true);
 
   return (
-    <div className="relative mb-8 text-stone-400">
+    <div className="relative mt-4 mb-8 text-stone-400">
       <span className="pointer-events-none absolute inset-y-0 flex items-center pl-3.5 font-light">
         <LuSearch />
       </span>

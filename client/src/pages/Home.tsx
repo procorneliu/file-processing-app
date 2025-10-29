@@ -1,4 +1,4 @@
-import Button from '../ui/Button';
+import ButtonLink from '../ui/ButtonLink';
 
 function Home() {
   return (
@@ -9,7 +9,7 @@ function Home() {
           From video or audio file to whatever you want. From changing file
           format to audio denoising.
         </p>
-        <Button>Start processing</Button>
+        <ButtonLink>Start processing</ButtonLink>
       </div>
     </main>
   );

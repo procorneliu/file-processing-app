@@ -6,8 +6,9 @@ function DropZone() {
   const { setFile } = useFile();
 
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      setFile(acceptedFiles[0] ?? null);
+    async (acceptedFiles: File[]) => {
+      const nextFile = acceptedFiles[0] ?? null;
+      setFile(nextFile);
     },
     [setFile],
   );

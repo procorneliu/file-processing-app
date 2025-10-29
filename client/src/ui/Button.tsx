@@ -1,13 +1,20 @@
-import { Link } from 'react-router';
+import type { ReactNode } from 'react';
 
-function Button({ children }: { children: string }) {
+type ButtonProps = {
+  children: ReactNode;
+  action: () => unknown;
+};
+
+function Button({ children, action }: ButtonProps) {
   return (
-    <Link
-      to="/app"
-      className="cursor-pointer rounded-lg px-4 py-2 outline outline-gray-700 hover:bg-gray-800 hover:outline-white"
+    <button
+      className={
+        'cursor-pointer rounded-lg border px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-900'
+      }
+      onClick={action}
     >
       {children}
-    </Link>
+    </button>
   );
 }
 

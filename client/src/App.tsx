@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Home from './pages/Home';
 import FileEditor from './pages/FileEditor';
 import { FileProvider } from './contexts/FileContext';
+import { CardProvider } from './contexts/CardContext';
 
 const router = createBrowserRouter([
   {
@@ -22,7 +23,9 @@ const router = createBrowserRouter([
 function App() {
   return (
     <FileProvider>
-      <RouterProvider router={router} />
+      <CardProvider>
+        <RouterProvider router={router} />
+      </CardProvider>
     </FileProvider>
   );
 }
