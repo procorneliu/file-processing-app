@@ -183,7 +183,9 @@ function CardSettings() {
     <div className="flex flex-col space-y-2 divide-y divide-gray-500 rounded-md border p-7 text-center">
       <h3 className="pb-2 font-bold uppercase">{title}</h3>
       <p className="w-80 pb-2">{body}</p>
-      <Button action={handleClickAction}>Start Processing</Button>
+      {!isProcessing && !processedFile && (
+        <Button action={handleClickAction}>Start Processing</Button>
+      )}
       {isProcessing && (
         <div className="w-full pt-4">
           <div className="h-2 w-full rounded-full bg-gray-700">

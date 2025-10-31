@@ -7,6 +7,18 @@ import ffmpegStatic from 'ffmpeg-static';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import { Observable, ReplaySubject } from 'rxjs';
+import processors from './fileProcessors/processors';
+import { archiveFramesDirectory } from './helpers/archiver';
+import cleanUp from './helpers/cleanUp';
+import {
+  buildOutputName,
+  createFramesOutputDirectory,
+  createTempOutputPath,
+  determineOutput,
+  writeTempInput,
+} from './helpers/outputNamer';
+import { buildCommand } from './helpers/commandsManager';
+import { ProgressStreamManager } from './helpers/progressManager';
 
 type HandlePromiseReturn = {
   buffer: Buffer;
@@ -16,10 +28,10 @@ type HandlePromiseReturn = {
 
 @Injectable()
 export class FfmpegService {
-  private readonly progressStreams = new Map<
-    string,
-    ReplaySubject<MessageEvent>
-  >();
+  // private readonly progressStreams = new Map<
+  //   string,
+  //   ReplaySubject<MessageEvent>
+  // >();
 
   private readonly activeJobs = new Map<string, ffmpeg.FfmpegCommand>();
   private readonly cancelledJobs = new Set<string>();
@@ -33,48 +45,50 @@ export class FfmpegService {
     type: string,
     jobId?: string,
   ): Promise<HandlePromiseReturn | null> {
-    const { extension, mimeType } = this.determineOutput(type);
+    const manager = new ProgressStreamManager();
 
-    const inputPath = await this.writeTempInput(file);
+    const { extension, mimeType } = determineOutput(type);
+
+    const inputPath = await writeTempInput(file);
     const cleanupTargets: string[] = [inputPath];
 
     if (jobId) {
-      this.initProgress(jobId);
-      this.emitProgress(jobId, 0);
+      manager.initProgress(jobId);
+      manager.emitProgress(jobId, 0);
     }
 
     try {
       const isFrameExtraction = type === 'mp4_png';
       const outputTarget = isFrameExtraction
-        ? await this.createFramesOutputDirectory()
-        : this.createTempOutputPath(extension);
+        ? await createFramesOutputDirectory()
+        : createTempOutputPath(extension);
 
       cleanupTargets.push(outputTarget);
 
-      const command = this.buildCommand(inputPath, outputTarget, type);
+      const command = buildCommand(inputPath, outputTarget, type);
       if (jobId) this.activeJobs.set(jobId, command);
 
-      await this.executeCommand(command, jobId);
+      await this.executeCommand(command, manager, jobId);
 
       if (jobId && this.cancelledJobs.has(jobId)) {
         return null;
       }
 
       let buffer: Buffer;
-      const filename = this.buildOutputName(file.originalname, extension);
+      const filename = buildOutputName(file.originalname, extension);
 
       if (isFrameExtraction) {
-        const zipPath = this.createTempOutputPath(extension);
+        const zipPath = createTempOutputPath(extension);
         cleanupTargets.push(zipPath);
-        await this.archiveFramesDirectory(outputTarget, zipPath);
+        await archiveFramesDirectory(outputTarget, zipPath);
         buffer = await fs.readFile(zipPath);
       } else {
         buffer = await fs.readFile(outputTarget);
       }
 
       if (jobId) {
-        this.emitProgress(jobId, 100);
-        this.completeProgress(jobId);
+        manager.emitProgress(jobId, 100);
+        manager.completeProgress(jobId);
       }
 
       console.log('Processing DONE! Output size:', buffer.length);
@@ -88,7 +102,7 @@ export class FfmpegService {
       if (jobId && this.cancelledJobs.has(jobId)) {
         return null;
       }
-      if (jobId) this.failProgress(jobId, error as Error);
+      if (jobId) manager.failProgress(jobId, error as Error);
       throw error;
     } finally {
       if (jobId) {
@@ -98,102 +112,107 @@ export class FfmpegService {
         this.activeJobs.clear();
         this.cancelledJobs.clear();
       }
-      await this.cleanUp(cleanupTargets);
+      await cleanUp(cleanupTargets);
     }
   }
 
-  cancel(jobId: string) {
+  cancel(jobId: string, manager: ProgressStreamManager) {
     const command = this.activeJobs.get(jobId);
-    const stream = this.progressStreams.get(jobId);
+    const stream = manager.progressStreams.get(jobId);
 
     this.cancelledJobs.add(jobId);
     command?.kill('SIGKILL');
     if (!stream) return;
     stream.next({ type: 'cancelled', data: {} });
     stream.complete();
-    this.progressStreams.delete(jobId);
+    manager.progressStreams.delete(jobId);
+    console.log('Job processing canceled!');
   }
 
-  // ---- ACTIONS
+  // // ---- ACTIONS
 
-  private convertToMp3(inputPath: string, outputPath: string) {
-    return ffmpeg(inputPath)
-      .noVideo()
-      .audioCodec('libmp3lame')
-      .audioBitrate('192k')
-      .format('mp3')
-      .output(outputPath);
-  }
+  // private convertToMp3(inputPath: string, outputPath: string) {
+  //   return ffmpeg(inputPath)
+  //     .noVideo()
+  //     .audioCodec('libmp3lame')
+  //     .audioBitrate('192k')
+  //     .format('mp3')
+  //     .output(outputPath);
+  // }
 
-  private extractAllPng(inputPath: string, outputPath: string) {
-    return ffmpeg(inputPath)
-      .noAudio()
-      .videoCodec('png')
-      .format('image2')
-      .outputOptions(['-start_number', '1', '-vsync', '0'])
-      .output(path.join(outputPath, 'frame_%05d.png'));
-  }
+  // private extractAllPng(inputPath: string, outputPath: string) {
+  //   return ffmpeg(inputPath)
+  //     .noAudio()
+  //     .videoCodec('png')
+  //     .format('image2')
+  //     .outputOptions(['-start_number', '1', '-vsync', '0'])
+  //     .output(path.join(outputPath, 'frame_%05d.png'));
+  // }
 
   // -- HELPER FUNCTIONS
 
-  private buildOutputName(inputName: string, extension: string) {
-    const { name } = path.parse(inputName);
-    return `${name || 'processed-file'}${extension}`;
-  }
+  // private buildOutputName(inputName: string, extension: string) {
+  //   const { name } = path.parse(inputName);
+  //   return `${name || 'processed-file'}${extension}`;
+  // }
 
-  private async writeTempInput(file: Express.Multer.File) {
-    const extension =
-      path.extname(file.originalname) || this.extensionFromMime(file.mimetype);
-    const tempPath = path.join(
-      tmpdir(),
-      `${randomUUID()}${extension || '.tmp'}`,
-    );
-    await fs.writeFile(tempPath, file.buffer);
-    return tempPath;
-  }
+  // private async writeTempInput(file: Express.Multer.File) {
+  //   const extension =
+  //     path.extname(file.originalname) || this.extensionFromMime(file.mimetype);
+  //   const tempPath = path.join(
+  //     tmpdir(),
+  //     `${randomUUID()}${extension || '.tmp'}`,
+  //   );
+  //   await fs.writeFile(tempPath, file.buffer);
+  //   return tempPath;
+  // }
 
-  private createTempOutputPath(extension: string) {
-    return path.join(tmpdir(), `${randomUUID()}${extension}`);
-  }
+  // private createTempOutputPath(extension: string) {
+  //   return path.join(tmpdir(), `${randomUUID()}${extension}`);
+  // }
 
-  private async createFramesOutputDirectory() {
-    return fs.mkdtemp(path.join(tmpdir(), `${randomUUID()}-frames-`));
-  }
+  // private async createFramesOutputDirectory() {
+  //   return fs.mkdtemp(path.join(tmpdir(), `${randomUUID()}-frames-`));
+  // }
 
-  private determineOutput(type: string) {
-    switch (type) {
-      case 'mp4_mp3':
-        return { extension: '.mp3', mimeType: 'audio/mpeg' };
-      case 'mp4_png':
-        return { extension: '.zip', mimeType: 'application/zip' };
-      default:
-        throw new Error(`Unsupported process type: ${type}`);
-    }
-  }
+  // private determineOutput(type: string) {
+  //   switch (type) {
+  //     case 'mp4_mp3':
+  //       return { extension: '.mp3', mimeType: 'audio/mpeg' };
+  //     case 'mp4_png':
+  //       return { extension: '.zip', mimeType: 'application/zip' };
+  //     default:
+  //       throw new Error(`Unsupported process type: ${type}`);
+  //   }
+  // }
 
-  private extensionFromMime(mimetype?: string) {
-    if (!mimetype) return '';
-    const map: Record<string, string> = {
-      'video/mp4': '.mp4',
-      'video/quicktime': '.mov',
-      'video/x-matroska': '.mkv',
-      'video/webm': '.webm',
-    };
-    return map[mimetype] ?? '';
-  }
+  // private extensionFromMime(mimetype?: string) {
+  //   if (!mimetype) return '';
+  //   const map: Record<string, string> = {
+  //     'video/mp4': '.mp4',
+  //     'video/quicktime': '.mov',
+  //     'video/x-matroska': '.mkv',
+  //     'video/webm': '.webm',
+  //   };
+  //   return map[mimetype] ?? '';
+  // }
 
-  private buildCommand(inputPath: string, outputPath: string, type: string) {
-    switch (type) {
-      case 'mp4_mp3':
-        return this.convertToMp3(inputPath, outputPath);
-      case 'mp4_png':
-        return this.extractAllPng(inputPath, outputPath);
-      default:
-        throw new Error(`Unsupported process type: ${type}`);
-    }
-  }
+  // private buildCommand(inputPath: string, outputPath: string, type: string) {
+  //   switch (type) {
+  //     case 'mp4_mp3':
+  //       return processors.convertToMp3(inputPath, outputPath);
+  //     case 'mp4_png':
+  //       return processors.extractAllPng(inputPath, outputPath);
+  //     default:
+  //       throw new Error(`Unsupported process type: ${type}`);
+  //   }
+  // }
 
-  private executeCommand(command: ffmpeg.FfmpegCommand, jobId?: string) {
+  private executeCommand(
+    command: ffmpeg.FfmpegCommand,
+    manager: ProgressStreamManager,
+    jobId?: string,
+  ) {
     return new Promise<void>((resolve, reject) => {
       command
         .on('error', (error: Error) => {
@@ -208,7 +227,7 @@ export class FfmpegService {
           if (progress.percent) {
             console.log(`Processing: ${Math.floor(progress.percent)}% done`);
             if (jobId && progress.percent >= 0)
-              this.emitProgress(jobId, Math.floor(progress.percent));
+              manager.emitProgress(jobId, Math.floor(progress.percent));
           }
         })
         .on('end', () => resolve())
@@ -216,77 +235,81 @@ export class FfmpegService {
     });
   }
 
-  private async archiveFramesDirectory(sourceDir: string, zipPath: string) {
-    const zip = new AdmZip();
-    const entries = await fs.readdir(sourceDir);
+  // private async archiveFramesDirectory(sourceDir: string, zipPath: string) {
+  //   const zip = new AdmZip();
+  //   const entries = await fs.readdir(sourceDir);
 
-    entries.sort();
+  //   entries.sort();
 
-    for (const name of entries) {
-      const entryPath = path.join(sourceDir, name);
-      const stats = await fs.stat(entryPath);
+  //   for (const name of entries) {
+  //     const entryPath = path.join(sourceDir, name);
+  //     const stats = await fs.stat(entryPath);
 
-      if (stats.isFile()) {
-        zip.addLocalFile(entryPath, '', name);
-      }
-    }
+  //     if (stats.isFile()) {
+  //       zip.addLocalFile(entryPath, '', name);
+  //     }
+  //   }
 
-    const zipBuffer = zip.toBuffer();
-    await fs.writeFile(zipPath, zipBuffer);
-  }
+  //   const zipBuffer = zip.toBuffer();
+  //   await fs.writeFile(zipPath, zipBuffer);
+  // }
 
-  getProgressStream(jobId: string): Observable<MessageEvent> {
-    this.initProgress(jobId);
-    const stream = this.progressStreams.get(jobId);
-    if (!stream) throw new Error('Progress stream not initialized');
-    return stream.asObservable();
-  }
+  // ----------
 
-  private initProgress(jobId: string) {
-    if (!this.progressStreams.has(jobId)) {
-      this.progressStreams.set(jobId, new ReplaySubject<MessageEvent>(1));
-    }
-  }
+  // getProgressStream(jobId: string): Observable<MessageEvent> {
+  //   this.initProgress(jobId);
+  //   const stream = this.progressStreams.get(jobId);
+  //   if (!stream) throw new Error('Progress stream not initialized');
+  //   return stream.asObservable();
+  // }
 
-  private emitProgress(jobId: string, percent: number) {
-    const stream = this.progressStreams.get(jobId);
-    if (!stream) return;
-    stream.next({ type: 'progress', data: { percent } });
-  }
+  // private initProgress(jobId: string) {
+  //   if (!this.progressStreams.has(jobId)) {
+  //     this.progressStreams.set(jobId, new ReplaySubject<MessageEvent>(1));
+  //   }
+  // }
 
-  private completeProgress(jobId: string) {
-    const stream = this.progressStreams.get(jobId);
-    if (!stream) return;
-    stream.next({ type: 'complete', data: { percent: 100 } });
-    stream.complete();
-    this.progressStreams.delete(jobId);
-  }
+  // private emitProgress(jobId: string, percent: number) {
+  //   const stream = this.progressStreams.get(jobId);
+  //   if (!stream) return;
+  //   stream.next({ type: 'progress', data: { percent } });
+  // }
 
-  private failProgress(jobId: string, error: Error) {
-    const stream = this.progressStreams.get(jobId);
-    if (!stream) return;
-    stream.next({ type: 'error', data: { message: error.message } });
-    stream.complete();
-    this.progressStreams.delete(jobId);
-  }
+  // private completeProgress(jobId: string) {
+  //   const stream = this.progressStreams.get(jobId);
+  //   if (!stream) return;
+  //   stream.next({ type: 'complete', data: { percent: 100 } });
+  //   stream.complete();
+  //   this.progressStreams.delete(jobId);
+  // }
 
-  private async cleanUp(paths: string[]) {
-    await Promise.all(
-      paths.map(async (filePath) => {
-        try {
-          const stats = await fs.lstat(filePath);
-          if (stats.isDirectory()) {
-            await fs.rm(filePath, { recursive: true, force: true });
-          } else {
-            await fs.unlink(filePath);
-          }
-        } catch (error) {
-          const err = error as NodeJS.ErrnoException;
-          if (err.code !== 'ENOENT') {
-            console.log('Failed to remove temp file', filePath, error);
-          }
-        }
-      }),
-    );
-  }
+  // private failProgress(jobId: string, error: Error) {
+  //   const stream = this.progressStreams.get(jobId);
+  //   if (!stream) return;
+  //   stream.next({ type: 'error', data: { message: error.message } });
+  //   stream.complete();
+  //   this.progressStreams.delete(jobId);
+  // }
+
+  // ----------
+
+  // private async cleanUp(paths: string[]) {
+  //   await Promise.all(
+  //     paths.map(async (filePath) => {
+  //       try {
+  //         const stats = await fs.lstat(filePath);
+  //         if (stats.isDirectory()) {
+  //           await fs.rm(filePath, { recursive: true, force: true });
+  //         } else {
+  //           await fs.unlink(filePath);
+  //         }
+  //       } catch (error) {
+  //         const err = error as NodeJS.ErrnoException;
+  //         if (err.code !== 'ENOENT') {
+  //           console.log('Failed to remove temp file', filePath, error);
+  //         }
+  //       }
+  //     }),
+  //   );
+  // }
 }
