@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import useGlobalShorcut from '../../hooks/GlobalShorcut';
+import useGlobalShorcut from '../../hooks/useGlobalShorcut';
 import List from './List';
 import SearchBar from './SearchBar';
 import { useFile } from '../../contexts/FileContext';
