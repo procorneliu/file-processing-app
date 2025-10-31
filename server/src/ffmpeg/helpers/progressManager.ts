@@ -1,12 +1,18 @@
 import { Observable, ReplaySubject } from 'rxjs';
 
-type ProgressMessage = {
+type ProgressStreamType = Map<string, ReplaySubject<ProgressMessage>>;
+
+export type ProgressMessage = {
   type: string;
   data: Record<string, unknown>;
 };
 
 export class ProgressStreamManager {
-  readonly progressStreams = new Map<string, ReplaySubject<ProgressMessage>>();
+  progressStreams: ProgressStreamType;
+
+  constructor(progressStreams: ProgressStreamType) {
+    this.progressStreams = progressStreams;
+  }
 
   getStream(jobId: string) {
     return this.progressStreams.get(jobId);

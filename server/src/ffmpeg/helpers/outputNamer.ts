@@ -3,6 +3,15 @@ import { randomUUID } from 'crypto';
 import { tmpdir } from 'os';
 import path from 'path';
 
+export async function getDynamicOutput(type: string, extension: string) {
+  const isFrameExtraction = type === 'mp4_png';
+  const outputTarget = isFrameExtraction
+    ? await createFramesOutputDirectory()
+    : createTempOutputPath(extension);
+
+  return { outputTarget, isFrameExtraction };
+}
+
 // MODEL PROCESSED FILE NAME BY INPUT FILE
 export function buildOutputName(inputName: string, extension: string) {
   const { name } = path.parse(inputName);

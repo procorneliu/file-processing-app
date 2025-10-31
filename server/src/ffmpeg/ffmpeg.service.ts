@@ -1,24 +1,23 @@
-import { Injectable, MessageEvent } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+
 import { promises as fs } from 'fs';
-import { tmpdir } from 'os';
-import { randomUUID } from 'crypto';
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegStatic from 'ffmpeg-static';
-import path from 'path';
-import AdmZip from 'adm-zip';
-import { Observable, ReplaySubject } from 'rxjs';
-import processors from './fileProcessors/processors';
+import { ReplaySubject } from 'rxjs';
+import { FfmpegCommand } from 'fluent-ffmpeg';
+
 import { archiveFramesDirectory } from './helpers/archiver';
 import cleanUp from './helpers/cleanUp';
 import {
   buildOutputName,
-  createFramesOutputDirectory,
   createTempOutputPath,
   determineOutput,
+  getDynamicOutput,
   writeTempInput,
 } from './helpers/outputNamer';
 import { buildCommand } from './helpers/commandsManager';
-import { ProgressStreamManager } from './helpers/progressManager';
+import {
+  ProgressMessage,
+  ProgressStreamManager,
+} from './helpers/progressManager';
 
 type HandlePromiseReturn = {
   buffer: Buffer;
@@ -26,197 +25,162 @@ type HandlePromiseReturn = {
   mimeType: string;
 };
 
+type JobRecord = {
+  command: FfmpegCommand;
+  cleanupTargets: string[];
+  cancelled: boolean;
+};
+
 @Injectable()
 export class FfmpegService {
-  // private readonly progressStreams = new Map<
-  //   string,
-  //   ReplaySubject<MessageEvent>
-  // >();
+  private readonly logger = new Logger(FfmpegService.name);
 
-  private readonly activeJobs = new Map<string, ffmpeg.FfmpegCommand>();
-  private readonly cancelledJobs = new Set<string>();
+  private readonly progressStreams = new Map<
+    string,
+    ReplaySubject<ProgressMessage>
+  >();
+  private readonly manager = new ProgressStreamManager(this.progressStreams);
 
-  constructor() {
-    if (ffmpegStatic) ffmpeg.setFfmpegPath(ffmpegStatic);
-  }
+  private readonly jobs = new Map<string, JobRecord>();
 
   async handle(
     file: Express.Multer.File,
     type: string,
     jobId?: string,
   ): Promise<HandlePromiseReturn | null> {
-    const manager = new ProgressStreamManager();
-
     const { extension, mimeType } = determineOutput(type);
 
     const inputPath = await writeTempInput(file);
     const cleanupTargets: string[] = [inputPath];
 
-    if (jobId) {
-      manager.initProgress(jobId);
-      manager.emitProgress(jobId, 0);
-    }
+    if (jobId) this.initProgress(jobId);
 
     try {
-      const isFrameExtraction = type === 'mp4_png';
-      const outputTarget = isFrameExtraction
-        ? await createFramesOutputDirectory()
-        : createTempOutputPath(extension);
-
+      const { outputTarget, isFrameExtraction } = await getDynamicOutput(
+        type,
+        extension,
+      );
       cleanupTargets.push(outputTarget);
 
       const command = buildCommand(inputPath, outputTarget, type);
-      if (jobId) this.activeJobs.set(jobId, command);
+      if (jobId)
+        this.jobs.set(jobId, { command, cleanupTargets, cancelled: false });
 
-      await this.executeCommand(command, manager, jobId);
+      await this.executeCommand(command, jobId);
 
-      if (jobId && this.cancelledJobs.has(jobId)) {
+      if (jobId && this.jobs.get(jobId)?.cancelled) {
         return null;
       }
 
-      let buffer: Buffer;
       const filename = buildOutputName(file.originalname, extension);
+      const buffer = await this.readResult(
+        outputTarget,
+        isFrameExtraction,
+        extension,
+        cleanupTargets,
+      );
 
-      if (isFrameExtraction) {
-        const zipPath = createTempOutputPath(extension);
-        cleanupTargets.push(zipPath);
-        await archiveFramesDirectory(outputTarget, zipPath);
-        buffer = await fs.readFile(zipPath);
-      } else {
-        buffer = await fs.readFile(outputTarget);
-      }
+      if (jobId) this.completeProgress(jobId);
 
-      if (jobId) {
-        manager.emitProgress(jobId, 100);
-        manager.completeProgress(jobId);
-      }
+      this.logger.log('Processing DONE! Output size:', buffer.length);
 
-      console.log('Processing DONE! Output size:', buffer.length);
-
-      return {
-        buffer,
-        filename,
-        mimeType,
-      };
-    } catch (error) {
-      if (jobId && this.cancelledJobs.has(jobId)) {
+      return { buffer, filename, mimeType };
+    } catch (err) {
+      if (jobId && this.jobs.get(jobId)?.cancelled) {
         return null;
       }
-      if (jobId) manager.failProgress(jobId, error as Error);
-      throw error;
+      if (jobId) this.manager.failProgress(jobId, err as Error);
+      throw err;
     } finally {
-      if (jobId) {
-        this.activeJobs.delete(jobId);
-        this.cancelledJobs.delete(jobId);
-      } else {
-        this.activeJobs.clear();
-        this.cancelledJobs.clear();
-      }
-      await cleanUp(cleanupTargets);
+      await this.finalizeJob(jobId, cleanupTargets);
     }
   }
 
-  cancel(jobId: string, manager: ProgressStreamManager) {
-    const command = this.activeJobs.get(jobId);
-    const stream = manager.progressStreams.get(jobId);
-
-    this.cancelledJobs.add(jobId);
-    command?.kill('SIGKILL');
-    if (!stream) return;
-    stream.next({ type: 'cancelled', data: {} });
-    stream.complete();
-    manager.progressStreams.delete(jobId);
-    console.log('Job processing canceled!');
+  getProgressStream(jobId: string) {
+    return this.manager.getProgressStream(jobId);
   }
 
-  // // ---- ACTIONS
+  cancel(jobId: string) {
+    const job = this.jobs.get(jobId);
+    const stream = this.progressStreams.get(jobId);
 
-  // private convertToMp3(inputPath: string, outputPath: string) {
-  //   return ffmpeg(inputPath)
-  //     .noVideo()
-  //     .audioCodec('libmp3lame')
-  //     .audioBitrate('192k')
-  //     .format('mp3')
-  //     .output(outputPath);
-  // }
+    if (!job) {
+      if (stream) {
+        stream.next({ type: 'cancelled', data: {} });
+        stream.complete();
+        this.progressStreams.delete(jobId);
+      }
+      return;
+    }
 
-  // private extractAllPng(inputPath: string, outputPath: string) {
-  //   return ffmpeg(inputPath)
-  //     .noAudio()
-  //     .videoCodec('png')
-  //     .format('image2')
-  //     .outputOptions(['-start_number', '1', '-vsync', '0'])
-  //     .output(path.join(outputPath, 'frame_%05d.png'));
-  // }
+    job.cancelled = true;
+    job.command.kill('SIGKILL');
 
-  // -- HELPER FUNCTIONS
+    if (stream) {
+      stream.next({ type: 'cancelled', data: {} });
+      stream.complete();
+      this.progressStreams.delete(jobId);
+    }
 
-  // private buildOutputName(inputName: string, extension: string) {
-  //   const { name } = path.parse(inputName);
-  //   return `${name || 'processed-file'}${extension}`;
-  // }
+    this.logger.log(`Job ${jobId} canceled!`);
+  }
 
-  // private async writeTempInput(file: Express.Multer.File) {
-  //   const extension =
-  //     path.extname(file.originalname) || this.extensionFromMime(file.mimetype);
-  //   const tempPath = path.join(
-  //     tmpdir(),
-  //     `${randomUUID()}${extension || '.tmp'}`,
-  //   );
-  //   await fs.writeFile(tempPath, file.buffer);
-  //   return tempPath;
-  // }
+  // ---- PRIVATE HELPER FUNCTIONS ----
 
-  // private createTempOutputPath(extension: string) {
-  //   return path.join(tmpdir(), `${randomUUID()}${extension}`);
-  // }
+  private async readResult(
+    outputTarget: string,
+    isFrameExtraction: boolean,
+    extension: string,
+    cleanupTargets: string[],
+  ): Promise<Buffer> {
+    if (!isFrameExtraction) {
+      return fs.readFile(outputTarget);
+    }
 
-  // private async createFramesOutputDirectory() {
-  //   return fs.mkdtemp(path.join(tmpdir(), `${randomUUID()}-frames-`));
-  // }
+    const zipPath = createTempOutputPath(extension);
+    cleanupTargets.push(zipPath);
 
-  // private determineOutput(type: string) {
-  //   switch (type) {
-  //     case 'mp4_mp3':
-  //       return { extension: '.mp3', mimeType: 'audio/mpeg' };
-  //     case 'mp4_png':
-  //       return { extension: '.zip', mimeType: 'application/zip' };
-  //     default:
-  //       throw new Error(`Unsupported process type: ${type}`);
-  //   }
-  // }
+    await archiveFramesDirectory(outputTarget, zipPath);
+    return fs.readFile(zipPath);
+  }
 
-  // private extensionFromMime(mimetype?: string) {
-  //   if (!mimetype) return '';
-  //   const map: Record<string, string> = {
-  //     'video/mp4': '.mp4',
-  //     'video/quicktime': '.mov',
-  //     'video/x-matroska': '.mkv',
-  //     'video/webm': '.webm',
-  //   };
-  //   return map[mimetype] ?? '';
-  // }
+  private initProgress(jobId: string) {
+    this.manager.initProgress(jobId);
+    this.manager.emitProgress(jobId, 0);
+  }
 
-  // private buildCommand(inputPath: string, outputPath: string, type: string) {
-  //   switch (type) {
-  //     case 'mp4_mp3':
-  //       return processors.convertToMp3(inputPath, outputPath);
-  //     case 'mp4_png':
-  //       return processors.extractAllPng(inputPath, outputPath);
-  //     default:
-  //       throw new Error(`Unsupported process type: ${type}`);
-  //   }
-  // }
+  private completeProgress(jobId: string) {
+    this.manager.emitProgress(jobId, 100);
+    this.manager.completeProgress(jobId);
+  }
 
-  private executeCommand(
-    command: ffmpeg.FfmpegCommand,
-    manager: ProgressStreamManager,
-    jobId?: string,
+  private clearJobById(jobId: string) {
+    this.jobs.delete(jobId);
+    this.progressStreams.delete(jobId);
+  }
+
+  private clearAllJobs() {
+    this.jobs.clear();
+    this.progressStreams.clear();
+  }
+
+  private async finalizeJob(
+    jobId: string | undefined,
+    cleanupTargets: string[],
   ) {
+    if (jobId) {
+      this.clearJobById(jobId);
+    } else {
+      this.clearAllJobs();
+    }
+    await cleanUp(cleanupTargets);
+  }
+
+  private executeCommand(command: FfmpegCommand, jobId?: string) {
     return new Promise<void>((resolve, reject) => {
       command
         .on('error', (error: Error) => {
-          if (jobId && this.cancelledJobs.has(jobId)) {
+          if (jobId && this.jobs.get(jobId)?.cancelled) {
             resolve();
             return;
           }
@@ -225,91 +189,15 @@ export class FfmpegService {
         })
         .on('progress', (progress) => {
           if (progress.percent) {
-            console.log(`Processing: ${Math.floor(progress.percent)}% done`);
+            this.logger.log(
+              `Processing: ${Math.floor(progress.percent)}% done`,
+            );
             if (jobId && progress.percent >= 0)
-              manager.emitProgress(jobId, Math.floor(progress.percent));
+              this.manager.emitProgress(jobId, Math.floor(progress.percent));
           }
         })
         .on('end', () => resolve())
         .run();
     });
   }
-
-  // private async archiveFramesDirectory(sourceDir: string, zipPath: string) {
-  //   const zip = new AdmZip();
-  //   const entries = await fs.readdir(sourceDir);
-
-  //   entries.sort();
-
-  //   for (const name of entries) {
-  //     const entryPath = path.join(sourceDir, name);
-  //     const stats = await fs.stat(entryPath);
-
-  //     if (stats.isFile()) {
-  //       zip.addLocalFile(entryPath, '', name);
-  //     }
-  //   }
-
-  //   const zipBuffer = zip.toBuffer();
-  //   await fs.writeFile(zipPath, zipBuffer);
-  // }
-
-  // ----------
-
-  // getProgressStream(jobId: string): Observable<MessageEvent> {
-  //   this.initProgress(jobId);
-  //   const stream = this.progressStreams.get(jobId);
-  //   if (!stream) throw new Error('Progress stream not initialized');
-  //   return stream.asObservable();
-  // }
-
-  // private initProgress(jobId: string) {
-  //   if (!this.progressStreams.has(jobId)) {
-  //     this.progressStreams.set(jobId, new ReplaySubject<MessageEvent>(1));
-  //   }
-  // }
-
-  // private emitProgress(jobId: string, percent: number) {
-  //   const stream = this.progressStreams.get(jobId);
-  //   if (!stream) return;
-  //   stream.next({ type: 'progress', data: { percent } });
-  // }
-
-  // private completeProgress(jobId: string) {
-  //   const stream = this.progressStreams.get(jobId);
-  //   if (!stream) return;
-  //   stream.next({ type: 'complete', data: { percent: 100 } });
-  //   stream.complete();
-  //   this.progressStreams.delete(jobId);
-  // }
-
-  // private failProgress(jobId: string, error: Error) {
-  //   const stream = this.progressStreams.get(jobId);
-  //   if (!stream) return;
-  //   stream.next({ type: 'error', data: { message: error.message } });
-  //   stream.complete();
-  //   this.progressStreams.delete(jobId);
-  // }
-
-  // ----------
-
-  // private async cleanUp(paths: string[]) {
-  //   await Promise.all(
-  //     paths.map(async (filePath) => {
-  //       try {
-  //         const stats = await fs.lstat(filePath);
-  //         if (stats.isDirectory()) {
-  //           await fs.rm(filePath, { recursive: true, force: true });
-  //         } else {
-  //           await fs.unlink(filePath);
-  //         }
-  //       } catch (error) {
-  //         const err = error as NodeJS.ErrnoException;
-  //         if (err.code !== 'ENOENT') {
-  //           console.log('Failed to remove temp file', filePath, error);
-  //         }
-  //       }
-  //     }),
-  //   );
-  // }
 }
