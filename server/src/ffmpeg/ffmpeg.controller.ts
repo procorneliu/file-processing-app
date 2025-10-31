@@ -1,10 +1,13 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
+  Body,
   Controller,
-  Get,
+  HttpException,
+  HttpStatus,
+  MessageEvent,
+  Param,
   Post,
-  Res,
+  Sse,
   StreamableFile,
   UploadedFile,
   UseInterceptors,
@@ -12,44 +15,49 @@ import {
 import { FfmpegService } from './ffmpeg.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import type { Response } from 'express';
+import { Observable } from 'rxjs';
 
-@Controller('extract')
+@Controller('process')
 export class FfmpegController {
   constructor(private ffmpegService: FfmpegService) {}
 
-  @Post('/audio')
+  @Post()
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
     }),
   )
-  async extractAudio(
+  async processFile(
     @UploadedFile() file: Express.Multer.File,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+    @Body('type') type: string,
+    @Body('jobId') jobId: string,
+  ): Promise<StreamableFile> {
     if (!file) throw new BadRequestException('File upload is required');
+    if (!jobId) throw new BadRequestException('JobId is required');
 
-    const { buffer, filename, mimeType } =
-      await this.ffmpegService.extractAudio(file);
+    const result = await this.ffmpegService.handle(file, type, jobId);
 
-    res.set({
-      'Content-Type': mimeType,
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(
-        filename,
-      )}"`,
+    if (!result) {
+      throw new HttpException('', HttpStatus.NO_CONTENT);
+    }
+
+    const { buffer, filename, mimeType } = result;
+    return new StreamableFile(buffer, {
+      type: mimeType,
+      disposition: `attachment; filename="${encodeURIComponent(filename)}"`,
+      length: buffer.length,
     });
-
-    return new StreamableFile(buffer);
   }
 
-  @Get('/images')
-  extractImages() {
-    return this.ffmpegService.extractImages();
+  @Post('cancel/:id')
+  cancelProcessFile(@Param('id') jobId: string) {
+    if (!jobId) throw new BadRequestException('JobId is required');
+    this.ffmpegService.cancel(jobId);
   }
 
-  @Get('/denoise')
-  audioDenoise() {
-    return this.ffmpegService.audioDenoise();
+  @Sse('progress/:id')
+  progress(@Param('id') jobId: string): Observable<MessageEvent> {
+    if (!jobId) throw new BadRequestException('JobId is required');
+    return this.ffmpegService.getProgressStream(jobId);
   }
 }
