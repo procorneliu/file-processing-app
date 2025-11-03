@@ -35,7 +35,12 @@ function FileProvider({ children }: { children: ReactNode }) {
 
   return (
     <FileContext.Provider
-      value={{ file, setFile, processedFile, setProcessedFile }}
+      value={{
+        file,
+        setFile,
+        processedFile,
+        setProcessedFile,
+      }}
     >
       {children}
     </FileContext.Provider>

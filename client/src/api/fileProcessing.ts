@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_BASE } from '../hooks/useProcessingJob';
 
 type ExtractAudioResult = {
   url: string;
@@ -15,7 +16,7 @@ export async function processFile(
   form.append('type', type);
   form.append('jobId', jobId);
 
-  const res = await axios.post('http://localhost:3000/api/process', form, {
+  const res = await axios.post(`${API_BASE}`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
     responseType: 'blob',
   });

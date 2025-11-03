@@ -3,7 +3,7 @@ import type { ProcessedFile } from '../contexts/FileContext';
 import axios, { AxiosError } from 'axios';
 import { processFile } from '../api/fileProcessing';
 
-const API_BASE = `http://localhost:3000/api/process`;
+export const API_BASE = `http://localhost:3000/api/process`;
 
 type JobStatus = 'idle' | 'running' | 'completed' | 'cancelled' | 'error';
 
@@ -30,6 +30,7 @@ export function useProcessingJob(): UseProcessingJobReturn {
   const [error, setError] = useState<string | null>(null);
   const [download, setDownload] = useState<ProcessedFile>(null);
 
+  const failedRef = useRef(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   const jobIdRef = useRef<string | null>(null);
 
@@ -52,6 +53,26 @@ export function useProcessingJob(): UseProcessingJobReturn {
       return null;
     });
   }, [releaseDownload]);
+
+  const onSseError = (event: Event) => {};
+
+  function failOnce(message: string, meta?: { from: 'sse' | 'catch' }) {
+    if (failedRef.current) return;
+    failedRef.current = true;
+
+    const event = eventSourceRef.current;
+
+    try {
+      if (!event) return;
+      event.removeEventListener('error', onSseError);
+      event.close();
+    } catch {}
+
+    setStatus('error');
+    setError(message);
+
+    jobIdRef.current = null;
+  }
 
   const cancel = useCallback(async () => {
     const jobId = jobIdRef.current;
@@ -110,6 +131,10 @@ export function useProcessingJob(): UseProcessingJobReturn {
       });
 
       eventSource.addEventListener('error', (event) => {
+        console.log('One, 🍕');
+        if (failedRef.current) return;
+        failedRef.current = true;
+
         const message = event as MessageEvent<string>;
         try {
           const payload = JSON.parse(message.data) as { message?: string };
@@ -130,6 +155,8 @@ export function useProcessingJob(): UseProcessingJobReturn {
           setStatus('cancelled');
           return;
         }
+        if (failedRef.current) return; // Don't set 'completed' if already failed
+
         setDownload(result);
         setStatus('completed');
       } catch (err) {
@@ -140,9 +167,13 @@ export function useProcessingJob(): UseProcessingJobReturn {
             return;
           }
         }
-        setStatus('error');
-        setError(err instanceof Error ? err.message : 'Processing failed');
-        console.log(err);
+
+        if (!failedRef.current) {
+          console.log('Two, 🔥');
+          failedRef.current = true;
+          setStatus('error');
+          setError(err instanceof Error ? err.message : 'Processing failed');
+        }
       } finally {
         cleanupEventSource();
         jobIdRef.current = null;

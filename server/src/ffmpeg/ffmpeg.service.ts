@@ -62,7 +62,7 @@ export class FfmpegService {
       );
       cleanupTargets.push(outputTarget);
 
-      const command = buildCommand(inputPath, outputTarget, type);
+      const command = await buildCommand(inputPath, outputTarget, type);
       if (jobId)
         this.jobs.set(jobId, { command, cleanupTargets, cancelled: false });
 

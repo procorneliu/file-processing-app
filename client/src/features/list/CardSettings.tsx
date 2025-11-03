@@ -26,6 +26,8 @@ function CardSettings() {
   }, [activeCard?.id, cancel, setProcessedFile]);
 
   useEffect(() => {
+    window.addEventListener('beforeunload', cancel);
+
     return () => {
       void cancel();
     };
@@ -38,6 +40,7 @@ function CardSettings() {
 
   function handleClickAction() {
     if (!file || !processType || isProcessing) {
+      cancel();
       setProcessedFile(null);
       return;
     }
@@ -48,9 +51,12 @@ function CardSettings() {
     <div className="flex flex-col space-y-2 divide-y divide-gray-500 rounded-md border p-7 text-center">
       <h3 className="pb-2 font-bold uppercase">{title}</h3>
       <p className="w-80 pb-2">{body}</p>
-      {!isProcessing && !processedFile && (
-        <Button action={handleClickAction}>Start Processing</Button>
+      {!processedFile && (
+        <Button action={handleClickAction}>
+          {!isProcessing ? 'Start' : 'Stop'} Processing
+        </Button>
       )}
+
       {isProcessing && <ProgressBar progress={progress} />}
       {error && <ErrorMessage message={error} />}
       {processedFile && <DownloadButton processedFile={processedFile} />}
