@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 
 import { promises as fs } from 'fs';
 import { ReplaySubject } from 'rxjs';

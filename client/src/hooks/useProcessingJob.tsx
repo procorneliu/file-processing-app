@@ -30,7 +30,6 @@ export function useProcessingJob(): UseProcessingJobReturn {
   const [error, setError] = useState<string | null>(null);
   const [download, setDownload] = useState<ProcessedFile>(null);
 
-  const failedRef = useRef(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   const jobIdRef = useRef<string | null>(null);
 
@@ -53,26 +52,6 @@ export function useProcessingJob(): UseProcessingJobReturn {
       return null;
     });
   }, [releaseDownload]);
-
-  const onSseError = (event: Event) => {};
-
-  function failOnce(message: string, meta?: { from: 'sse' | 'catch' }) {
-    if (failedRef.current) return;
-    failedRef.current = true;
-
-    const event = eventSourceRef.current;
-
-    try {
-      if (!event) return;
-      event.removeEventListener('error', onSseError);
-      event.close();
-    } catch {}
-
-    setStatus('error');
-    setError(message);
-
-    jobIdRef.current = null;
-  }
 
   const cancel = useCallback(async () => {
     const jobId = jobIdRef.current;
@@ -127,14 +106,11 @@ export function useProcessingJob(): UseProcessingJobReturn {
       eventSource.addEventListener('cancelled', () => {
         cleanupEventSource();
         setStatus('cancelled');
+
         jobIdRef.current = null;
       });
 
       eventSource.addEventListener('error', (event) => {
-        console.log('One, 🍕');
-        if (failedRef.current) return;
-        failedRef.current = true;
-
         const message = event as MessageEvent<string>;
         try {
           const payload = JSON.parse(message.data) as { message?: string };
@@ -151,11 +127,11 @@ export function useProcessingJob(): UseProcessingJobReturn {
 
       try {
         const result = await processFile(file, type, jobId);
+
         if (!result) {
           setStatus('cancelled');
           return;
         }
-        if (failedRef.current) return; // Don't set 'completed' if already failed
 
         setDownload(result);
         setStatus('completed');
@@ -166,13 +142,14 @@ export function useProcessingJob(): UseProcessingJobReturn {
             setStatus('cancelled');
             return;
           }
-        }
 
-        if (!failedRef.current) {
-          console.log('Two, 🔥');
-          failedRef.current = true;
+          let msg = err instanceof Error ? err.message : 'Processing failed';
+          if (err.response?.status === 406) {
+            msg = 'File is not compatible for this processing type.';
+          }
+
           setStatus('error');
-          setError(err instanceof Error ? err.message : 'Processing failed');
+          setError(msg);
         }
       } finally {
         cleanupEventSource();
