@@ -129,11 +129,6 @@ export class FfmpegService {
     this.logger.log(`Job ${jobId} canceled!`);
   }
 
-  getCards() {
-    const data = fs.readFile('../../data/cards-data.json');
-    return data;
-  }
-
   // ---- PRIVATE HELPER FUNCTIONS ----
 
   private async readResult(

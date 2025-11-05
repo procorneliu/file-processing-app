@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Body,
   Controller,
-  Get,
   HttpException,
   HttpStatus,
   MessageEvent,
@@ -60,11 +59,6 @@ export class FfmpegController {
   cancelProcessFile(@Param('id') jobId: string) {
     if (!jobId) throw new BadRequestException('JobId is required');
     this.ffmpegService.cancel(jobId);
-  }
-
-  @Get('cards')
-  getCards() {
-    return this.ffmpegService.getCards();
   }
 
   @Sse('progress/:id')

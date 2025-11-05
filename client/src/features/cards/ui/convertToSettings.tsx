@@ -78,9 +78,10 @@ const formatGroups: FormatGroup[] = [
 ];
 
 function ConvertToSettings({ fileExtension }: ConvertToProps) {
-  const { convertTo, setConvertTo } = useFile();
+  const { convertTo, setConvertTo, setProcessedFile } = useFile();
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    setProcessedFile(null);
     setConvertTo(e.target.value);
   }
 

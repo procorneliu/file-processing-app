@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useCard, type Card } from '../../contexts/CardContext';
 import ListItem from './ListItem';
-import axios from 'axios';
-import { API_BASE } from '../../hooks/useProcessingJob';
 import getCardsData from './helpers/getCardsData';
 
 export type Process = Card & {
@@ -38,10 +36,6 @@ function List({ query }: { query: string }) {
       ))}
     </ul>
   );
-}
-
-async function getCards() {
-  return await axios.get(`${API_BASE}/cards`);
 }
 
 export default List;
