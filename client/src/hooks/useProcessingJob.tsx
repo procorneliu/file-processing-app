@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import type { ProcessedFile } from '../contexts/FileContext';
+import { useFile, type ProcessedFile } from '../contexts/FileContext';
 import axios, { AxiosError } from 'axios';
 import { processFile } from '../api/fileProcessing';
 
@@ -25,6 +25,8 @@ const noopMessage = (value?: string | null) =>
   value === 'cancelled' || value === undefined || value === null;
 
 export function useProcessingJob(): UseProcessingJobReturn {
+  const { convertTo } = useFile();
+
   const [status, setStatus] = useState<JobStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +128,7 @@ export function useProcessingJob(): UseProcessingJobReturn {
       });
 
       try {
-        const result = await processFile(file, type, jobId);
+        const result = await processFile(file, type, convertTo, jobId);
 
         if (!result) {
           setStatus('cancelled');
@@ -156,7 +158,7 @@ export function useProcessingJob(): UseProcessingJobReturn {
         jobIdRef.current = null;
       }
     },
-    [cancel, cleanupEventSource, resetState],
+    [cancel, cleanupEventSource, resetState, convertTo],
   );
 
   return { start, cancel, status, progress, error, download };

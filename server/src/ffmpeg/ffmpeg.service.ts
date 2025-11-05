@@ -1,15 +1,16 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { promises as fs } from 'fs';
 import { ReplaySubject } from 'rxjs';
 import { FfmpegCommand } from 'fluent-ffmpeg';
+import mime from 'mime-types';
 
 import { archiveFramesDirectory } from './helpers/archiver';
 import cleanUp from './helpers/cleanUp';
 import {
   buildOutputName,
   createTempOutputPath,
-  determineOutput,
+  // determineOutput,
   getDynamicOutput,
   writeTempInput,
 } from './helpers/outputNamer';
@@ -46,9 +47,12 @@ export class FfmpegService {
   async handle(
     file: Express.Multer.File,
     type: string,
+    convertTo: string,
     jobId?: string,
   ): Promise<HandlePromiseReturn | null> {
-    const { extension, mimeType } = determineOutput(type);
+    // const { extension, mimeType } = determineOutput(type);
+
+    const mimeType = mime.lookup(convertTo) || 'video/mp4';
 
     const inputPath = await writeTempInput(file);
     const cleanupTargets: string[] = [inputPath];
@@ -58,7 +62,7 @@ export class FfmpegService {
     try {
       const { outputTarget, isFrameExtraction } = await getDynamicOutput(
         type,
-        extension,
+        convertTo,
       );
       cleanupTargets.push(outputTarget);
 
@@ -72,11 +76,11 @@ export class FfmpegService {
         return null;
       }
 
-      const filename = buildOutputName(file.originalname, extension);
+      const filename = buildOutputName(file.originalname, convertTo);
       const buffer = await this.readResult(
         outputTarget,
         isFrameExtraction,
-        extension,
+        convertTo,
         cleanupTargets,
       );
 
@@ -125,19 +129,24 @@ export class FfmpegService {
     this.logger.log(`Job ${jobId} canceled!`);
   }
 
+  getCards() {
+    const data = fs.readFile('../../data/cards-data.json');
+    return data;
+  }
+
   // ---- PRIVATE HELPER FUNCTIONS ----
 
   private async readResult(
     outputTarget: string,
     isFrameExtraction: boolean,
-    extension: string,
+    convertTo: string,
     cleanupTargets: string[],
   ): Promise<Buffer> {
     if (!isFrameExtraction) {
       return fs.readFile(outputTarget);
     }
 
-    const zipPath = createTempOutputPath(extension);
+    const zipPath = createTempOutputPath(convertTo);
     cleanupTargets.push(zipPath);
 
     await archiveFramesDirectory(outputTarget, zipPath);

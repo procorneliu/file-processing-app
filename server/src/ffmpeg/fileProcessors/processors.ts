@@ -16,7 +16,7 @@ export default class processors {
 
     if (!allowedList.includes(inputFileExtension))
       throw new NotAcceptableException(
-        `You cannot convert ${inputFileExtension} to mp3`,
+        `You cannot convert ${inputFileExtension} to an audio file`,
       );
   }
 
@@ -48,13 +48,25 @@ export default class processors {
     // Check if file has audio
     await this.hasFileAudio(inputPath);
 
-    return ffmpeg(inputPath)
-      .noVideo()
-      .audioCodec('libmp3lame')
-      .audioBitrate('192k')
-      .format('mp3')
-      .output(outputPath);
+    return ffmpeg(inputPath).output(outputPath);
   }
+
+  // static async convertToMp3(inputPath: string, outputPath: string) {
+  //   const allowedFormats = ['mp4', 'mov'];
+
+  //   // check if file format is allowed
+  //   this.isFileAllowed(inputPath, allowedFormats);
+
+  //   // Check if file has audio
+  //   await this.hasFileAudio(inputPath);
+
+  //   return ffmpeg(inputPath)
+  //     .noVideo()
+  //     .audioCodec('libmp3lame')
+  //     .audioBitrate('192k')
+  //     .format('mp3')
+  //     .output(outputPath);
+  // }
 
   static extractAllPng(inputPath: string, outputPath: string) {
     const allowedFormats = ['mp4', 'mov'];

@@ -9,11 +9,13 @@ type ExtractAudioResult = {
 export async function processFile(
   file: File,
   type: string,
+  convertTo: string,
   jobId: string,
 ): Promise<ExtractAudioResult | null> {
   const form = new FormData();
   form.append('file', file);
   form.append('type', type);
+  form.append('convertTo', convertTo);
   form.append('jobId', jobId);
 
   const res = await axios.post(`${API_BASE}`, form, {
@@ -31,9 +33,7 @@ export async function processFile(
   }
   const url = URL.createObjectURL(blob);
 
-  const extension =
-    type === 'mp4_mp3' ? '.mp3' : type === 'mp4_png' ? '.zip' : '';
-  const filename = `${modeledFileName(file.name)}${extension}`;
+  const filename = `${modeledFileName(file.name)}.${convertTo}`;
 
   return { url, filename };
 }

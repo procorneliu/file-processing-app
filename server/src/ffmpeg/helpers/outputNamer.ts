@@ -15,7 +15,7 @@ export async function getDynamicOutput(type: string, extension: string) {
 // MODEL PROCESSED FILE NAME BY INPUT FILE
 export function buildOutputName(inputName: string, extension: string) {
   const { name } = path.parse(inputName);
-  return `${name || 'processed-file'}${extension}`;
+  return `${name || 'processed-file'}.${extension}`;
 }
 
 // WRITE TEMPORARY INPUT PATH ON LOCAL MACHINE
@@ -29,7 +29,7 @@ export async function writeTempInput(file: Express.Multer.File) {
 
 // WRITE TEMPORARY OUTPUT PATH ON LOCAL MACHINE
 export function createTempOutputPath(extension: string) {
-  return path.join(tmpdir(), `${randomUUID()}${extension}`);
+  return path.join(tmpdir(), `${randomUUID()}.${extension}`);
 }
 
 // WRITE TEMPORARY OUTPUT DIRECTORY ON LOCAL MACHINE

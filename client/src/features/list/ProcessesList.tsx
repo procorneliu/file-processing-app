@@ -4,7 +4,7 @@ import useGlobalShorcut from '../../hooks/useGlobalShorcut';
 import List from './List';
 import SearchBar from './SearchBar';
 import DropZone from '../dropZone/DropZone';
-import CardSettings from './CardSettings';
+import CardSettings from '../cards/CardSettings';
 import { useCard } from '../../contexts/CardContext';
 
 function ProcessesList() {

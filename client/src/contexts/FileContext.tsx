@@ -12,6 +12,8 @@ type FileContextType = {
   setFile: Dispatch<SetStateAction<File | null>>;
   processedFile: ProcessedFile;
   setProcessedFile: Dispatch<SetStateAction<ProcessedFile>>;
+  convertTo: string;
+  setConvertTo: Dispatch<SetStateAction<string>>;
 };
 
 const FileContext = createContext<FileContextType>({
@@ -19,11 +21,14 @@ const FileContext = createContext<FileContextType>({
   setFile: () => {},
   processedFile: null,
   setProcessedFile: () => {},
+  convertTo: '',
+  setConvertTo: () => {},
 });
 
 function FileProvider({ children }: { children: ReactNode }) {
   const [file, setFile] = useState<File | null>(null);
   const [processedFile, setProcessedFile] = useState<ProcessedFile>(null);
+  const [convertTo, setConvertTo] = useState<string>('mp4');
 
   useEffect(() => {
     return () => {
@@ -40,6 +45,8 @@ function FileProvider({ children }: { children: ReactNode }) {
         setFile,
         processedFile,
         setProcessedFile,
+        convertTo,
+        setConvertTo,
       }}
     >
       {children}

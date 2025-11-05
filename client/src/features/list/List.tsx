@@ -1,27 +1,17 @@
 import { useState } from 'react';
 import { useCard, type Card } from '../../contexts/CardContext';
 import ListItem from './ListItem';
+import axios from 'axios';
+import { API_BASE } from '../../hooks/useProcessingJob';
+import getCardsData from './helpers/getCardsData';
 
 export type Process = Card & {
   type: string;
 };
 
-const processesList = [
-  {
-    id: 1,
-    title: 'MP4 to PNG',
-    body: 'Convert all your video frames to png images',
-    type: 'mp4_png',
-  },
-  {
-    id: 2,
-    title: 'MP4 to MP3',
-    body: 'Get only audio channel from your video.',
-    type: 'mp4_mp3',
-  },
-];
-
 function List({ query }: { query: string }) {
+  const processesList = getCardsData();
+
   const { activeCard, setActiveCard } = useCard();
   const [processes] = useState<Process[]>(processesList);
 
@@ -48,6 +38,10 @@ function List({ query }: { query: string }) {
       ))}
     </ul>
   );
+}
+
+async function getCards() {
+  return await axios.get(`${API_BASE}/cards`);
 }
 
 export default List;
