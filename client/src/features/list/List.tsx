@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCard, type Card } from '../../contexts/CardContext';
 import ListItem from './ListItem';
-import getCardsData from './helpers/getCardsData';
+import getCardsData from './data/getCardsData';
 
 export type Process = Card & {
   type: string;

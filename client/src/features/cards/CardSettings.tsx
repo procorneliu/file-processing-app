@@ -9,7 +9,7 @@ import ErrorMessage from '../../ui/ErrorMessage';
 
 import DownloadButton from '../../ui/DownloadButton';
 import useProcessingJob from '../../hooks/useProcessingJob';
-import ConvertToSettings from './ui/convertToSettings';
+import ConvertToList from './ui/ConvertToList';
 
 function CardSettings() {
   const { activeCard } = useCard();
@@ -56,7 +56,7 @@ function CardSettings() {
     <div className="flex flex-col space-y-2 divide-y divide-gray-500 rounded-md border p-7 text-center">
       <h3 className="pb-2 font-bold uppercase">{title}</h3>
       <p className="w-80 pb-2">{body}</p>
-      <ConvertToSettings fileExtension={fileExtension} />
+      <ConvertToList fileExtension={fileExtension} processType={processType!} />
 
       {!processedFile && (
         <Button action={handleClickAction}>

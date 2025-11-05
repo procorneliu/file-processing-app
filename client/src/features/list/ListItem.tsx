@@ -27,7 +27,7 @@ function ListItem({ active, onActiveCard, process }: ProcessItemProps) {
 
   return (
     <li
-      className={`h-35 w-55 cursor-pointer rounded-xl border border-gray-500 p-4 transition-all duration-300 hover:-translate-y-1 hover:scale-102 hover:shadow-[0_0_1rem] ${active ? 'bg-amber-500 hover:bg-amber-500 hover:shadow-amber-500' : 'hover:bg-gray-900 hover:shadow-blue-500'}`}
+      className={`h-30 w-50 cursor-pointer rounded-xl border border-gray-500 p-4 transition-all duration-300 hover:-translate-y-1 hover:scale-102 hover:shadow-[0_0_1rem] ${active ? 'bg-amber-500 hover:bg-amber-500 hover:shadow-amber-500' : 'hover:bg-gray-900 hover:shadow-blue-500'}`}
       onClick={handleClick}
     >
       <h4 className="font-bold tracking-wide">{title}</h4>

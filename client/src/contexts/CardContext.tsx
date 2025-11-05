@@ -12,7 +12,7 @@ export type Card = {
   id: number;
   title: string;
   body: string;
-  type?: string;
+  type: string;
 };
 
 export type CardContextType = {
