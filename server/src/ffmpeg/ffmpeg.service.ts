@@ -10,7 +10,6 @@ import cleanUp from './helpers/cleanUp';
 import {
   buildOutputName,
   createTempOutputPath,
-  // determineOutput,
   getDynamicOutput,
   writeTempInput,
 } from './helpers/outputNamer';
@@ -50,9 +49,7 @@ export class FfmpegService {
     convertTo: string,
     jobId?: string,
   ): Promise<HandlePromiseReturn | null> {
-    // const { extension, mimeType } = determineOutput(type);
-
-    const mimeType = mime.lookup(convertTo) || 'video/mp4';
+    const mimeType = mime.lookup(convertTo) || 'application/octet-stream';
 
     const inputPath = await writeTempInput(file);
     const cleanupTargets: string[] = [inputPath];
