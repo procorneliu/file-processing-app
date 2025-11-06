@@ -7,6 +7,7 @@ import {
 import { useFile } from '../../contexts/FileContext';
 import { useCard } from '../../contexts/CardContext';
 import getFormats from '../../data/getFormats';
+import { getFileExtension } from '../../utils/getFileExtension';
 
 type DragAndDropProps = {
   getRootProps: <T extends DropzoneRootProps>(props?: T) => T;
@@ -33,7 +34,7 @@ function DropZone() {
           'Something went wrong with file uploading. Please try another one!',
         );
 
-      const fileFormat = nextFile && nextFile.name.split('.').pop();
+      const fileFormat = nextFile && getFileExtension(nextFile.name);
       // check if uploaded file format is supported
       const isExtensionAllowed = fileFormat
         ? allFormats.includes(fileFormat)

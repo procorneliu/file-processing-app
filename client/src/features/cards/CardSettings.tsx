@@ -10,6 +10,7 @@ import ErrorMessage from '../../ui/ErrorMessage';
 import DownloadButton from '../../ui/DownloadButton';
 import useProcessingJob from '../../hooks/useProcessingJob';
 import ConvertToList from './ui/ConvertToList';
+import { getFileExtension } from '../../utils/getFileExtension';
 
 function CardSettings() {
   const { activeCard } = useCard();
@@ -18,7 +19,7 @@ function CardSettings() {
     useProcessingJob();
 
   const fileExtension = file
-    ? file.name.split('.').pop()?.toUpperCase()
+    ? getFileExtension(file.name)?.toUpperCase()
     : '...';
 
   useEffect(() => {

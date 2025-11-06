@@ -1,5 +1,6 @@
 import { useFile } from '../../../contexts/FileContext';
 import getFormats from '../../../data/getFormats';
+import { getFileExtension } from '../../../utils/getFileExtension';
 
 type FormatsListProp = {
   format: string;
@@ -7,7 +8,7 @@ type FormatsListProp = {
 
 function FormatsList({ format }: FormatsListProp) {
   const { file } = useFile();
-  const fileExtension = file?.name.split('.').pop();
+  const fileExtension = getFileExtension(file?.name);
 
   // Getting all formats by type
   const formats = getFormats(format);
