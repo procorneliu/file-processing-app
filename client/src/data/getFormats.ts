@@ -60,6 +60,8 @@ export default function getFormats(type: string) {
       return allFormats.audio;
     case 'image':
       return allFormats.image;
+    case 'all':
+      return allFormats.video.concat(allFormats.audio).concat(allFormats.image);
     default:
       throw new Error('No formats found. Please reload page and try again.');
   }

@@ -6,11 +6,13 @@ import {
 } from 'react-dropzone';
 import { useFile } from '../../contexts/FileContext';
 import { useCard } from '../../contexts/CardContext';
+import getFormats from '../../data/getFormats';
 
 type DragAndDropProps = {
   getRootProps: <T extends DropzoneRootProps>(props?: T) => T;
   getInputProps: <T extends DropzoneInputProps>(props?: T) => T;
   isDragActive: boolean;
+  error: string | null;
 };
 
 type ChooseFileProps = { file: File | null } & Omit<
@@ -20,14 +22,32 @@ type ChooseFileProps = { file: File | null } & Omit<
 
 function DropZone() {
   const { setActiveCard } = useCard();
-  const { file, setFile } = useFile();
+  const { file, setFile, error, setError } = useFile();
+  const allFormats = getFormats('all');
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       const nextFile = acceptedFiles[0] ?? null;
+      if (!nextFile)
+        return setError(
+          'Something went wrong with file uploading. Please try another one!',
+        );
+
+      const fileFormat = nextFile && nextFile.name.split('.').pop();
+      // check if uploaded file format is supported
+      const isExtensionAllowed = fileFormat
+        ? allFormats.includes(fileFormat)
+        : false;
+
+      if (!isExtensionAllowed) {
+        setError('File format not supported!');
+        setFile(null);
+        return;
+      }
       setFile(nextFile);
+      setError(null);
     },
-    [setFile],
+    [setError, allFormats, setFile],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -39,17 +59,23 @@ function DropZone() {
     setActiveCard(null);
   }, [file, setActiveCard]);
 
+  useEffect(() => {
+    if (error) setFile(null);
+  }, [error, setFile]);
+
   return !file ? (
     <DragAndDropZone
       getRootProps={getRootProps}
       getInputProps={getInputProps}
       isDragActive={isDragActive}
+      error={error}
     />
   ) : (
     <ChooseFileZone
       getRootProps={getRootProps}
       getInputProps={getInputProps}
       file={file}
+      error={error}
     />
   );
 }
@@ -58,7 +84,12 @@ function DragAndDropZone({
   getRootProps,
   getInputProps,
   isDragActive,
+  error,
 }: DragAndDropProps) {
+  const message = error
+    ? error
+    : 'Drag "n" drop some files here, or click to select files';
+
   return (
     <div className="my-auto" title="Choose a file">
       <div
@@ -70,7 +101,7 @@ function DragAndDropZone({
         {isDragActive ? (
           <p>Drop the files here ...</p>
         ) : (
-          <p>Drag 'n' drop some files here, or click to select files</p>
+          <p className={error ? 'text-red-500' : ''}>{message}</p>
         )}
       </div>
     </div>
@@ -81,6 +112,7 @@ function ChooseFileZone({
   getRootProps,
   getInputProps,
   file,
+  error,
 }: ChooseFileProps) {
   const extension = file?.name.split('.')[1];
   // if file name is white space, replace with 'file'
@@ -100,7 +132,9 @@ function ChooseFileZone({
         className="mb-1.5 cursor-pointer rounded-lg border-2 border-dashed px-3 py-1 hover:bg-gray-900"
       >
         <input {...getInputProps()} />
-        <p className="text-sm text-blue-500">{formattedFilename}</p>
+        <p className={`text-sm ${error ? 'text-red-500' : 'text-blue-500'}`}>
+          {!error ? formattedFilename : error}
+        </p>
       </div>
     </div>
   );
