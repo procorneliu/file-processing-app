@@ -1,7 +1,5 @@
 import { useFile } from '../../../contexts/FileContext';
-import AudioList from './AudioList';
-import ImageList from './ImageList';
-import VideoList from './VideoList';
+import FormatsList from './FormatsList';
 
 export type FormatOption = { value: string; label: string };
 
@@ -30,10 +28,10 @@ function ConvertToList({ fileExtension, processType }: ConvertToProps) {
         onChange={handleChange}
         className="rounded-md border"
       >
-        {processType === 'video_video' && <VideoList />}
-        {processType === 'video_audio' && <AudioList />}
-        {processType === 'audio_audio' && <AudioList />}
-        {processType === 'video_image' && <ImageList />}
+        {processType === 'video_video' && <FormatsList format="video" />}
+        {processType === 'video_audio' && <FormatsList format="audio" />}
+        {processType === 'audio_audio' && <FormatsList format="audio" />}
+        {processType === 'video_image' && <FormatsList format="image" />}
       </select>
     </div>
   );
