@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import { getFileType } from '../features/list/utils/getFileType';
+import type { FileType } from '../types/file';
 
 export type ProcessedFile = {
   url: string;
@@ -16,6 +18,7 @@ type FileContextType = {
   setConvertTo: Dispatch<SetStateAction<string>>;
   error: string | null;
   setError: Dispatch<SetStateAction<string | null>>;
+  fileType: FileType;
 };
 
 const FileContext = createContext<FileContextType>({
@@ -27,6 +30,7 @@ const FileContext = createContext<FileContextType>({
   setConvertTo: () => {},
   error: null,
   setError: () => {},
+  fileType: null,
 });
 
 function FileProvider({ children }: { children: ReactNode }) {
@@ -34,6 +38,8 @@ function FileProvider({ children }: { children: ReactNode }) {
   const [processedFile, setProcessedFile] = useState<ProcessedFile>(null);
   const [convertTo, setConvertTo] = useState<string>('mp4');
   const [error, setError] = useState<string | null>(null);
+
+  const fileType = getFileType(file?.name);
 
   useEffect(() => {
     return () => {
@@ -54,6 +60,7 @@ function FileProvider({ children }: { children: ReactNode }) {
         setConvertTo,
         error,
         setError,
+        fileType,
       }}
     >
       {children}

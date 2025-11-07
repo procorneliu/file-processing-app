@@ -32,6 +32,7 @@ export class FfmpegController {
     @Body('type') type: string,
     @Body('convertTo') convertTo: string,
     @Body('jobId') jobId: string,
+    @Body('options') options: string,
   ): Promise<StreamableFile> {
     if (!file) throw new BadRequestException('File upload is required');
     if (!jobId) throw new BadRequestException('JobId is required');
@@ -41,6 +42,7 @@ export class FfmpegController {
       type,
       convertTo,
       jobId,
+      options,
     );
 
     if (!result) {

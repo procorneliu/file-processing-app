@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_BASE } from '../hooks/useProcessingJob';
+import { API_BASE, type ProcessingOptions } from '../hooks/useProcessingJob';
 
 type ExtractAudioResult = {
   url: string;
@@ -11,12 +11,15 @@ export async function processFile(
   type: string,
   convertTo: string,
   jobId: string,
+  options: ProcessingOptions,
 ): Promise<ExtractAudioResult | null> {
   const form = new FormData();
+
   form.append('file', file);
   form.append('type', type);
   form.append('convertTo', convertTo);
   form.append('jobId', jobId);
+  form.append('options', JSON.stringify(options));
 
   const res = await axios.post(`${API_BASE}`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useCard } from '../../contexts/CardContext';
 import { useFile } from '../../contexts/FileContext';
@@ -9,18 +9,24 @@ import ErrorMessage from '../../ui/ErrorMessage';
 
 import DownloadButton from '../../ui/DownloadButton';
 import useProcessingJob from '../../hooks/useProcessingJob';
-import ConvertToList from './ui/ConvertToList';
+import ConvertToList from './components/ConvertToList';
 import { getFileExtension } from '../../utils/getFileExtension';
+import AudioSettings from './components/AudioSettings';
+import type { ProcessingOptions } from '../../hooks/useProcessingJob';
 
 function CardSettings() {
   const { activeCard } = useCard();
-  const { file, processedFile, setProcessedFile } = useFile();
+  const { file, processedFile, setProcessedFile, fileType, convertTo } =
+    useFile();
   const { start, cancel, status, progress, error, download } =
     useProcessingJob();
+  const [audioOptions, setAudioOptions] = useState<ProcessingOptions>({
+    bitrate: '192k',
+  });
 
-  const fileExtension = file
-    ? getFileExtension(file.name)?.toUpperCase()
-    : '...';
+  const rawFileExtension = file ? getFileExtension(file.name) : null;
+  const fileExtension = rawFileExtension?.toUpperCase() ?? '...';
+  const sourceExtension = rawFileExtension?.toLowerCase() ?? null;
 
   useEffect(() => {
     setProcessedFile(download);
@@ -43,6 +49,14 @@ function CardSettings() {
 
   const { title, body, type: processType } = activeCard;
   const isProcessing = status === 'running';
+  const convertTarget = convertTo?.toLowerCase() ?? '';
+  const sourceIsWav = sourceExtension === 'wav';
+  const targetIsWav = convertTarget === 'wav';
+  const producesAudioOutput =
+    processType === 'audio_audio' || processType === 'video_audio';
+  const hasCompatibleFile = fileType === 'audio' || fileType === 'video';
+  const showAudioSettings =
+    producesAudioOutput && hasCompatibleFile && !sourceIsWav && !targetIsWav;
 
   function handleClickAction() {
     if (!file || !processType || isProcessing) {
@@ -50,14 +64,17 @@ function CardSettings() {
       setProcessedFile(null);
       return;
     }
-    start({ file, type: processType });
+    start({ file, type: processType, options: audioOptions });
   }
 
   return (
     <div className="flex flex-col space-y-2 divide-y divide-gray-500 rounded-md border p-7 text-center">
       <h3 className="pb-2 font-bold uppercase">{title}</h3>
-      <p className="w-80 pb-2">{body}</p>
+      <p className="pb-2">{body}</p>
       <ConvertToList fileExtension={fileExtension} processType={processType!} />
+      {showAudioSettings && (
+        <AudioSettings options={audioOptions} onChange={setAudioOptions} />
+      )}
 
       {!processedFile && (
         <Button action={handleClickAction}>

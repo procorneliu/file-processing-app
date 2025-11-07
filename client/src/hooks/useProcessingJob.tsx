@@ -7,9 +7,14 @@ export const API_BASE = `http://localhost:3000/api/process`;
 
 type JobStatus = 'idle' | 'running' | 'completed' | 'cancelled' | 'error';
 
+export type ProcessingOptions = {
+  bitrate: string;
+};
+
 type StartParams = {
   file: File;
   type: string;
+  options: ProcessingOptions;
 };
 
 type UseProcessingJobReturn = {
@@ -73,7 +78,7 @@ export function useProcessingJob(): UseProcessingJobReturn {
   }, [cleanupEventSource, resetState]);
 
   const start = useCallback(
-    async ({ file, type }: StartParams) => {
+    async ({ file, type, options }: StartParams) => {
       if (!file || !type) return;
 
       await cancel();
@@ -128,7 +133,7 @@ export function useProcessingJob(): UseProcessingJobReturn {
       });
 
       try {
-        const result = await processFile(file, type, convertTo, jobId);
+        const result = await processFile(file, type, convertTo, jobId, options);
 
         if (!result) {
           setStatus('cancelled');

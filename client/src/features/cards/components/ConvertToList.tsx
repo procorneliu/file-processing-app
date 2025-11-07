@@ -18,6 +18,7 @@ function ConvertToList({ fileExtension, processType }: ConvertToProps) {
 
   return (
     <div className="flex justify-center space-x-2 pb-2">
+      <p className="mr-auto">Format:</p>
       <p>From</p>
       <span className="text-blue-500">{fileExtension}</span>
       <label htmlFor="format ">To</label>

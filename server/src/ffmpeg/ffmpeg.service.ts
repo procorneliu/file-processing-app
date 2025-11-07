@@ -47,7 +47,8 @@ export class FfmpegService {
     file: Express.Multer.File,
     type: string,
     convertTo: string,
-    jobId?: string,
+    options: string,
+    jobId: string,
   ): Promise<HandlePromiseReturn | null> {
     const mimeType = mime.lookup(convertTo) || 'application/octet-stream';
 
@@ -63,7 +64,13 @@ export class FfmpegService {
       );
       cleanupTargets.push(outputTarget);
 
-      const command = await buildCommand(inputPath, outputTarget, type);
+      const command = await buildCommand(
+        inputPath,
+        outputTarget,
+        type,
+        options,
+        convertTo,
+      );
       if (jobId)
         this.jobs.set(jobId, { command, cleanupTargets, cancelled: false });
 
