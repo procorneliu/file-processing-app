@@ -41,8 +41,8 @@ export class FfmpegController {
       file,
       type,
       convertTo,
-      jobId,
       options,
+      jobId,
     );
 
     if (!result) {

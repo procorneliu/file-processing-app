@@ -13,6 +13,7 @@ import ConvertToList from './components/ConvertToList';
 import { getFileExtension } from '../../utils/getFileExtension';
 import AudioSettings from './components/AudioSettings';
 import type { ProcessingOptions } from '../../hooks/useProcessingJob';
+import VideoSettings from './components/VideoSettings';
 
 function CardSettings() {
   const { activeCard } = useCard();
@@ -20,8 +21,9 @@ function CardSettings() {
     useFile();
   const { start, cancel, status, progress, error, download } =
     useProcessingJob();
-  const [audioOptions, setAudioOptions] = useState<ProcessingOptions>({
+  const [fileOptions, setFileOptions] = useState<ProcessingOptions>({
     bitrate: '192k',
+    resolution: '1920x1080',
   });
 
   const rawFileExtension = file ? getFileExtension(file.name) : null;
@@ -53,10 +55,14 @@ function CardSettings() {
   const sourceIsWav = sourceExtension === 'wav';
   const targetIsWav = convertTarget === 'wav';
   const producesAudioOutput =
-    processType === 'audio_audio' || processType === 'video_audio';
+    processType === 'audio_audio' ||
+    processType === 'video_audio' ||
+    processType === 'video_video';
   const hasCompatibleFile = fileType === 'audio' || fileType === 'video';
   const showAudioSettings =
     producesAudioOutput && hasCompatibleFile && !sourceIsWav && !targetIsWav;
+  const showVideoSettings =
+    processType === 'video_video' || processType === 'video_image';
 
   function handleClickAction() {
     if (!file || !processType || isProcessing) {
@@ -64,7 +70,7 @@ function CardSettings() {
       setProcessedFile(null);
       return;
     }
-    start({ file, type: processType, options: audioOptions });
+    start({ file, type: processType, options: fileOptions });
   }
 
   return (
@@ -73,7 +79,11 @@ function CardSettings() {
       <p className="pb-2">{body}</p>
       <ConvertToList fileExtension={fileExtension} processType={processType!} />
       {showAudioSettings && (
-        <AudioSettings options={audioOptions} onChange={setAudioOptions} />
+        <AudioSettings options={fileOptions} onChange={setFileOptions} />
+      )}
+
+      {showVideoSettings && (
+        <VideoSettings options={fileOptions} onChange={setFileOptions} />
       )}
 
       {!processedFile && (

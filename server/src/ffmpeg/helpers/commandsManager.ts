@@ -11,8 +11,8 @@ export function buildCommand(
   switch (type) {
     case 'video_audio':
       return processors.videoToAudio(inputPath, outputPath, options, convertTo);
-    // case 'audio_audio':
-    //   return processors.convertToMp3(inputPath, outputPath, options);
+    case 'video_video':
+      return processors.videoToVideo(inputPath, outputPath, options);
     // case 'mp4_png':
     //   return processors.extractAllPng(inputPath, outputPath, options);
     default:

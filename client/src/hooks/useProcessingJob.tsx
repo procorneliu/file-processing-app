@@ -8,7 +8,8 @@ export const API_BASE = `http://localhost:3000/api/process`;
 type JobStatus = 'idle' | 'running' | 'completed' | 'cancelled' | 'error';
 
 export type ProcessingOptions = {
-  bitrate: string;
+  bitrate?: string;
+  resolution?: string;
 };
 
 type StartParams = {

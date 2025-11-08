@@ -5,6 +5,7 @@ import { NotAcceptableException } from '@nestjs/common';
 
 type ProcessingOptions = {
   bitrate?: string;
+  resolution?: string;
 };
 
 type CodecProfile = {
@@ -79,9 +80,10 @@ export default class processors {
     inputPath: string,
     outputPath: string,
     options: string,
-    convertTo?: string,
+    convertTo: string,
   ) {
     // const allowedFormats = ['mp4', 'mov'];
+    // const { bitrate }: ProcessingOptions = options ? JSON.parse(options) : {};
     const { bitrate }: ProcessingOptions = options ? JSON.parse(options) : {};
 
     // check if file format is allowed
@@ -98,6 +100,21 @@ export default class processors {
 
     if (supportsBitrate && bitrate) {
       command.audioBitrate(bitrate);
+    }
+
+    return command.output(outputPath);
+  }
+
+  static videoToVideo(inputPath: string, outputPath: string, options: string) {
+    const { resolution }: ProcessingOptions = options
+      ? JSON.parse(options)
+      : {};
+
+    const command = ffmpeg(inputPath);
+
+    // Add resolution setting option
+    if (resolution) {
+      command.size(resolution);
     }
 
     return command.output(outputPath);
