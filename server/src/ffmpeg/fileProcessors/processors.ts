@@ -2,36 +2,12 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import path from 'path';
 import { NotAcceptableException } from '@nestjs/common';
+import { CodecProfile } from '../ffmpeg.types';
+import { ALL_FORMATS, AUDIO_CODEC_MAP } from '../ffmpeg.constants';
 
 type ProcessingOptions = {
   bitrate?: string;
   resolution?: string;
-};
-
-type CodecProfile = {
-  codec: string;
-  supportsBitrate: boolean;
-};
-
-const AUDIO_CODEC_MAP: Record<string, CodecProfile> = {
-  mp3: { codec: 'libmp3lame', supportsBitrate: true },
-  mp2: { codec: 'mp2', supportsBitrate: true },
-  mp4: { codec: 'aac', supportsBitrate: true },
-  aac: { codec: 'aac', supportsBitrate: true },
-  m4a: { codec: 'aac', supportsBitrate: true },
-  ogg: { codec: 'libvorbis', supportsBitrate: true },
-  opus: { codec: 'libopus', supportsBitrate: true },
-  ogv: { codec: 'libvorbis', supportsBitrate: true },
-  wma: { codec: 'wmav2', supportsBitrate: true },
-  flac: { codec: 'flac', supportsBitrate: false },
-  alac: { codec: 'alac', supportsBitrate: false },
-  wav: { codec: 'pcm_s16le', supportsBitrate: false },
-  aiff: { codec: 'pcm_s16be', supportsBitrate: false },
-  aif: { codec: 'pcm_s16be', supportsBitrate: false },
-  amr: { codec: 'libopencore_amrnb', supportsBitrate: true },
-  ac3: { codec: 'ac3', supportsBitrate: true },
-  dts: { codec: 'dca', supportsBitrate: true },
-  spx: { codec: 'libspeex', supportsBitrate: true },
 };
 
 function resolveAudioCodec(extension?: string): CodecProfile {
@@ -82,12 +58,10 @@ export default class processors {
     options: string,
     convertTo: string,
   ) {
-    // const allowedFormats = ['mp4', 'mov'];
-    // const { bitrate }: ProcessingOptions = options ? JSON.parse(options) : {};
     const { bitrate }: ProcessingOptions = options ? JSON.parse(options) : {};
 
     // check if file format is allowed
-    // this.isFileAllowed(inputPath, allowedFormats);
+    this.isFileAllowed(inputPath, ALL_FORMATS);
 
     // Check if file has audio
     await this.hasFileAudio(inputPath);
