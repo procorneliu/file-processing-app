@@ -77,7 +77,7 @@ function CardSettings() {
     <div className="flex flex-col space-y-2 divide-y divide-gray-500 rounded-md border p-7 text-center">
       <h3 className="pb-2 font-bold uppercase">{title}</h3>
       <p className="pb-2">{body}</p>
-      <ConvertToList fileExtension={fileExtension} processType={processType!} />
+      <ConvertToList fileExtension={fileExtension} processType={processType} />
       {showAudioSettings && (
         <AudioSettings options={fileOptions} onChange={setFileOptions} />
       )}

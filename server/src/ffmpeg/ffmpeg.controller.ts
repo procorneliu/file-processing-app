@@ -35,7 +35,6 @@ export class FfmpegController {
     if (!file) throw new BadRequestException('File upload is required');
     const { type, convertTo, jobId, options } = req.body;
     if (!jobId) throw new BadRequestException('JobId is required');
-    console.log(convertTo, '😐');
     const result = await this.ffmpegService.handle(
       file,
       type,

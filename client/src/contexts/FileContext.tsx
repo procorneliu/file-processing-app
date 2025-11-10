@@ -36,7 +36,7 @@ const FileContext = createContext<FileContextType>({
 function FileProvider({ children }: { children: ReactNode }) {
   const [file, setFile] = useState<File | null>(null);
   const [processedFile, setProcessedFile] = useState<ProcessedFile>(null);
-  const [convertTo, setConvertTo] = useState<string>('mp4');
+  const [convertTo, setConvertTo] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   const fileType = getFileType(file?.name);
