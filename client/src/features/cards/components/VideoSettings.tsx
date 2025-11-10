@@ -27,6 +27,15 @@ const VIDEO_RESOLUTIONS = [
 ];
 
 function VideoSettings({ options, onChange }: VideoSettingsProps) {
+  return (
+    <div className="space-y-2 pb-2">
+      <Resolution options={options} onChange={onChange} />
+      <FpsSetting options={options} onChange={onChange} />
+    </div>
+  );
+}
+
+function Resolution({ options, onChange }: VideoSettingsProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const { setProcessedFile } = useFile();
 
@@ -37,7 +46,7 @@ function VideoSettings({ options, onChange }: VideoSettingsProps) {
   }
 
   return (
-    <div className="flex justify-between space-x-2 pb-2">
+    <div className="flex justify-between">
       <p className="flex items-center gap-1">
         Output resolution:
         <span className="relative">
@@ -61,7 +70,6 @@ function VideoSettings({ options, onChange }: VideoSettingsProps) {
         value={options.resolution}
         onChange={handleChange}
       >
-        π
         {VIDEO_RESOLUTIONS.map((resolution) => (
           <ResolutionItem resolution={resolution} key={resolution} />
         ))}
@@ -72,6 +80,34 @@ function VideoSettings({ options, onChange }: VideoSettingsProps) {
 
 function ResolutionItem({ resolution }: ResolutionItem) {
   return <option value={resolution}>{resolution}</option>;
+}
+
+function FpsSetting({ options, onChange }: VideoSettingsProps) {
+  const { setProcessedFile } = useFile();
+
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const nextFps = e.target.value;
+    onChange((prev) => ({ ...prev, fps: nextFps }));
+    setProcessedFile(null);
+  }
+
+  return (
+    <div className="flex justify-between">
+      <p>
+        Fps: <span>{options.fps ?? 30}</span>
+      </p>
+
+      <input
+        type="range"
+        name="fps"
+        id="fps"
+        value={options.fps ? Number(options.fps) : 30}
+        onChange={handleChange}
+        min={1}
+        max={60}
+      />
+    </div>
+  );
 }
 
 export default VideoSettings;

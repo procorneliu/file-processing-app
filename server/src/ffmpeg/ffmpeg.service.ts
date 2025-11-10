@@ -50,8 +50,6 @@ export class FfmpegService {
     options: string,
     jobId: string,
   ): Promise<HandlePromiseReturn | null> {
-    const mimeType = mime.lookup(convertTo) || 'application/octet-stream';
-
     const inputPath = await writeTempInput(file);
     const cleanupTargets: string[] = [inputPath];
 
@@ -64,13 +62,15 @@ export class FfmpegService {
       );
       cleanupTargets.push(outputTarget);
 
-      const command = await buildCommand(
-        inputPath,
-        outputTarget,
-        type,
-        options,
-        convertTo,
-      );
+      const mimeType = isFrameExtraction
+        ? 'application/zip'
+        : mime.lookup(convertTo) || 'application/octet-stream';
+
+      const { command, cleanupTargets: additionalCleanupTargets } =
+        await buildCommand(inputPath, outputTarget, type, options, convertTo);
+      if (additionalCleanupTargets)
+        cleanupTargets.push(...additionalCleanupTargets);
+
       if (jobId)
         this.jobs.set(jobId, { command, cleanupTargets, cancelled: false });
 
@@ -80,7 +80,9 @@ export class FfmpegService {
         return null;
       }
 
-      const filename = buildOutputName(file.originalname, convertTo);
+      // For video_image, use .zip extension for the filename
+      const outputExtension = type === 'video_image' ? 'zip' : convertTo;
+      const filename = buildOutputName(file.originalname, outputExtension);
       const buffer = await this.readResult(
         outputTarget,
         isFrameExtraction,
@@ -145,7 +147,7 @@ export class FfmpegService {
       return fs.readFile(outputTarget);
     }
 
-    const zipPath = createTempOutputPath(convertTo);
+    const zipPath = createTempOutputPath('zip');
     cleanupTargets.push(zipPath);
 
     await archiveFramesDirectory(outputTarget, zipPath);

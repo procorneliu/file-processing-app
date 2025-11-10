@@ -35,8 +35,8 @@ export async function processFile(
     return null;
   }
   const url = URL.createObjectURL(blob);
-
-  const filename = `${modeledFileName(file.name)}.${convertTo}`;
+  const extension = res.data.type === 'application/zip' ? 'zip' : convertTo;
+  const filename = `${modeledFileName(file.name)}.${extension}`;
 
   return { url, filename };
 }

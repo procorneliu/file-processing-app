@@ -4,7 +4,7 @@ import { tmpdir } from 'os';
 import path from 'path';
 
 export async function getDynamicOutput(type: string, extension: string) {
-  const isFrameExtraction = type === 'mp4_png';
+  const isFrameExtraction = type === 'video_image';
   const outputTarget = isFrameExtraction
     ? await createFramesOutputDirectory()
     : createTempOutputPath(extension);
@@ -40,9 +40,9 @@ export async function createFramesOutputDirectory() {
 // DEPENDING ON INPUT FILE OUTPUT WILL BE FILE OR FOLDER
 export function determineOutput(type: string) {
   switch (type) {
-    case 'mp4_mp3':
+    case 'video_audio':
       return { extension: '.mp3', mimeType: 'audio/mpeg' };
-    case 'mp4_png':
+    case 'video_image':
       return { extension: '.zip', mimeType: 'application/zip' };
     default:
       throw new Error(`Unsupported process type: ${type}`);

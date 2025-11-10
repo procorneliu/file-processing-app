@@ -4,10 +4,13 @@ import path from 'path';
 import { NotAcceptableException } from '@nestjs/common';
 import { CodecProfile } from '../ffmpeg.types';
 import { ALL_FORMATS, AUDIO_CODEC_MAP } from '../ffmpeg.constants';
+import getFileExtension from '../helpers/getFileExtension';
+import { createTempOutputPath } from '../helpers/outputNamer';
 
 type ProcessingOptions = {
   bitrate?: string;
   resolution?: string;
+  fps?: string;
 };
 
 function resolveAudioCodec(extension?: string): CodecProfile {
@@ -22,10 +25,7 @@ export default class processors {
   }
 
   static isFileAllowed(inputPath: string, allowedList: string[]) {
-    const inputFileExtension = path
-      .extname(inputPath)
-      .replace('.', '')
-      .toLowerCase();
+    const inputFileExtension = getFileExtension(inputPath);
 
     if (!allowedList.includes(inputFileExtension))
       throw new NotAcceptableException(
@@ -58,10 +58,10 @@ export default class processors {
     options: string,
     convertTo: string,
   ) {
-    const { bitrate }: ProcessingOptions = options ? JSON.parse(options) : {};
-
     // check if file format is allowed
     this.isFileAllowed(inputPath, ALL_FORMATS);
+
+    const { bitrate }: ProcessingOptions = options ? JSON.parse(options) : {};
 
     // Check if file has audio
     await this.hasFileAudio(inputPath);
@@ -76,34 +76,83 @@ export default class processors {
       command.audioBitrate(bitrate);
     }
 
-    return command.output(outputPath);
+    return { command: command.output(outputPath) };
   }
 
+  // convert video to another video format
   static videoToVideo(inputPath: string, outputPath: string, options: string) {
-    const { resolution }: ProcessingOptions = options
+    // check if file format is allowed
+    this.isFileAllowed(inputPath, ALL_FORMATS);
+
+    const { resolution, fps }: ProcessingOptions = options
       ? JSON.parse(options)
       : {};
 
     const command = ffmpeg(inputPath);
+
+    if (fps) {
+      command.fps(Number(fps));
+    }
 
     // Add resolution setting option
     if (resolution) {
       command.size(resolution);
     }
 
-    return command.output(outputPath);
+    return { command: command.output(outputPath) };
   }
 
-  static extractAllPng(inputPath: string, outputPath: string) {
-    const allowedFormats = ['mp4', 'mov'];
+  static async videoToImage(
+    inputPath: string,
+    outputPath: string,
+    options: string,
+    convertTo: string,
+  ): Promise<{ command: ReturnType<typeof ffmpeg>; cleanupTargets: string[] }> {
+    // check if file format is allowed
+    this.isFileAllowed(inputPath, ALL_FORMATS);
 
-    this.isFileAllowed(inputPath, allowedFormats);
+    const { resolution, fps }: ProcessingOptions = options
+      ? JSON.parse(options)
+      : {};
 
-    return ffmpeg(inputPath)
-      .noAudio()
-      .videoCodec('png')
-      .format('image2')
-      .outputOptions(['-start_number', '1', '-vsync', '0'])
-      .output(path.join(outputPath, 'frame_%05d.png'));
+    let actualInputPath = inputPath;
+    const cleanupTargets: string[] = [];
+
+    // If fps or resolution is provided, first convert video to same format with new settings
+    if (fps || resolution) {
+      // Create a temporary intermediate video file
+      const intermediatePath = createTempOutputPath(
+        path.extname(inputPath).replace('.', '') || 'mp4',
+      );
+      cleanupTargets.push(intermediatePath);
+
+      // Execute the video-to-video conversion
+      const videoCommand = this.videoToVideo(
+        inputPath,
+        intermediatePath,
+        options,
+      ).command;
+
+      await new Promise<void>((resolve, reject) => {
+        videoCommand
+          .on('error', (error: Error) => {
+            reject(error);
+          })
+          .on('end', () => resolve())
+          .run();
+      });
+
+      // Use the processed video as input for image sequence
+      actualInputPath = intermediatePath;
+    }
+
+    const command = ffmpeg(actualInputPath).videoCodec('png').format('image2');
+
+    return {
+      command: command
+        .outputOptions(['-start_number', '1', '-vsync', '0'])
+        .output(path.join(outputPath, `frame_%05d.${convertTo}`)),
+      cleanupTargets,
+    };
   }
 }

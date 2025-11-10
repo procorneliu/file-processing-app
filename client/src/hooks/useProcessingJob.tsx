@@ -10,6 +10,7 @@ type JobStatus = 'idle' | 'running' | 'completed' | 'cancelled' | 'error';
 export type ProcessingOptions = {
   bitrate?: string;
   resolution?: string;
+  fps?: string;
 };
 
 type StartParams = {

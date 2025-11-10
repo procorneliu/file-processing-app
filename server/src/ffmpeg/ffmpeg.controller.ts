@@ -1,17 +1,18 @@
 import {
   BadRequestException,
-  Body,
   Controller,
   HttpException,
   HttpStatus,
   MessageEvent,
   Param,
   Post,
+  Req,
   Sse,
   StreamableFile,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { FfmpegService } from './ffmpeg.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -29,14 +30,12 @@ export class FfmpegController {
   )
   async processFile(
     @UploadedFile() file: Express.Multer.File,
-    @Body('type') type: string,
-    @Body('convertTo') convertTo: string,
-    @Body('jobId') jobId: string,
-    @Body('options') options: string,
+    @Req() req: Request,
   ): Promise<StreamableFile> {
     if (!file) throw new BadRequestException('File upload is required');
+    const { type, convertTo, jobId, options } = req.body;
     if (!jobId) throw new BadRequestException('JobId is required');
-
+    console.log(convertTo, '😐');
     const result = await this.ffmpegService.handle(
       file,
       type,
