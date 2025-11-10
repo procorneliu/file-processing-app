@@ -10,7 +10,19 @@ export async function buildCommand(
 ): Promise<{ command: FfmpegCommand; cleanupTargets?: string[] }> {
   switch (type) {
     case 'video_audio':
-      return processors.videoToAudio(inputPath, outputPath, options, convertTo);
+      return processors.convertToAudio(
+        inputPath,
+        outputPath,
+        options,
+        convertTo,
+      );
+    case 'audio_audio':
+      return processors.convertToAudio(
+        inputPath,
+        outputPath,
+        options,
+        convertTo,
+      );
     case 'video_video':
       return processors.videoToVideo(inputPath, outputPath, options);
     case 'video_image':

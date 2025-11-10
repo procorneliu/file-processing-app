@@ -29,7 +29,7 @@ export default class processors {
 
     if (!allowedList.includes(inputFileExtension))
       throw new NotAcceptableException(
-        `You cannot convert ${inputFileExtension} to an audio file`,
+        `File format ${inputFileExtension} is not supported for this conversion`,
       );
   }
 
@@ -52,7 +52,23 @@ export default class processors {
       );
   }
 
-  static async videoToAudio(
+  static async hasFileVideo(filePath: string): Promise<boolean> {
+    const result = await new Promise<boolean>((resolve, reject) => {
+      ffmpeg(filePath).ffprobe((err: Error, metadata) => {
+        if (err) reject(err);
+
+        const hasVideo = metadata.streams.some(
+          (stream) => stream.codec_type === 'video',
+        );
+
+        resolve(hasVideo);
+      });
+    });
+
+    return result;
+  }
+
+  static async convertToAudio(
     inputPath: string,
     outputPath: string,
     options: string,
@@ -62,15 +78,24 @@ export default class processors {
     this.isFileAllowed(inputPath, ALL_FORMATS);
 
     const { bitrate }: ProcessingOptions = options ? JSON.parse(options) : {};
-
     // Check if file has audio
     await this.hasFileAudio(inputPath);
+
+    // Check if file has video streams - only apply noVideo() if it does
+    const hasVideo = await this.hasFileVideo(inputPath);
 
     const targetExtension =
       convertTo ?? path.extname(outputPath).replace('.', '');
     const { codec, supportsBitrate } = resolveAudioCodec(targetExtension);
 
-    const command = ffmpeg(inputPath).noVideo().audioCodec(codec);
+    const command = ffmpeg(inputPath);
+
+    // Only remove video if the input file has video streams
+    if (hasVideo) {
+      command.noVideo();
+    }
+
+    command.audioCodec(codec);
 
     if (supportsBitrate && bitrate) {
       command.audioBitrate(bitrate);
