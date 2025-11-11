@@ -1,10 +1,4 @@
-import {
-  useState,
-  type ChangeEvent,
-  type Dispatch,
-  type SetStateAction,
-} from 'react';
-import { FaCircleQuestion } from 'react-icons/fa6';
+import { type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { useFile } from '../../../contexts/FileContext';
 import type { ProcessingOptions } from '../../../hooks/useProcessingJob';
 
@@ -36,7 +30,6 @@ function VideoSettings({ options, onChange }: VideoSettingsProps) {
 }
 
 function Resolution({ options, onChange }: VideoSettingsProps) {
-  const [showTooltip, setShowTooltip] = useState(false);
   const { setProcessedFile } = useFile();
 
   function handleChange(e: ChangeEvent<HTMLSelectElement>) {
@@ -47,22 +40,7 @@ function Resolution({ options, onChange }: VideoSettingsProps) {
 
   return (
     <div className="flex justify-between">
-      <p className="flex items-center gap-1">
-        Output resolution:
-        <span className="relative">
-          <FaCircleQuestion
-            className="cursor-help text-xs text-gray-500"
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
-          />
-          {showTooltip && (
-            <div className="absolute top-6 left-0 z-50 w-64 rounded-md bg-gray-800 p-2 text-xs text-white shadow-lg">
-              Video quality will not be looking good if you'll choose resolution
-              higher than original size.
-            </div>
-          )}
-        </span>
-      </p>
+      <p className="flex items-center gap-1">Output resolution:</p>
       <select
         name="video-settings"
         id="video-settings"
