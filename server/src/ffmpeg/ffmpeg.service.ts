@@ -49,10 +49,7 @@ export class FfmpegService {
   private readonly jobs = new Map<string, JobRecord>();
 
   constructor(@InjectQueue('processing') private processingQueue: Queue) {
-    this.manager = new ProgressStreamManager(
-      this.progressStreams,
-      this.processingQueue,
-    );
+    this.manager = new ProgressStreamManager(this.progressStreams);
   }
 
   logProgress(percent: number) {
@@ -83,9 +80,9 @@ export class FfmpegService {
         : mime.lookup(convertTo) || 'application/octet-stream';
 
       const progressCallback = jobId
-        ? async (percent: number) => {
+        ? (percent: number) => {
             this.logProgress(percent);
-            await this.manager.emitProgress(jobId, percent).catch(() => {});
+            this.manager.emitProgress(jobId, percent);
           }
         : undefined;
 
@@ -192,15 +189,11 @@ export class FfmpegService {
 
   private initProgress(jobId: string) {
     this.manager.initProgress(jobId);
-    this.manager.emitProgress(jobId, 0).catch(() => {
-      /* empty */
-    });
+    this.manager.emitProgress(jobId, 0);
   }
 
   private completeProgress(jobId: string) {
-    this.manager.emitProgress(jobId, 100).catch(() => {
-      /* empty */
-    });
+    this.manager.emitProgress(jobId, 100);
     this.manager.completeProgress(jobId);
   }
 
@@ -260,9 +253,7 @@ export class FfmpegService {
                 finalPercent = 50 + Math.floor(progress.percent / 2);
               }
 
-              this.manager.emitProgress(jobId, finalPercent).catch(() => {
-                /* empty */
-              });
+              this.manager.emitProgress(jobId, finalPercent);
             }
           }
         })

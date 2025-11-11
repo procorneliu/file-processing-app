@@ -7,7 +7,7 @@ export async function buildCommand(
   type: string,
   options: string,
   convertTo: string,
-  onProgress?: (percent: number) => Promise<void>,
+  onProgress?: (percent: number) => void | Promise<void>,
 ): Promise<{ command: FfmpegCommand; cleanupTargets?: string[] }> {
   switch (type) {
     case 'video_audio':

@@ -1,5 +1,4 @@
 import { Observable, ReplaySubject } from 'rxjs';
-import { Queue } from 'bullmq';
 
 type ProgressStreamType = Map<string, ReplaySubject<ProgressMessage>>;
 
@@ -10,11 +9,9 @@ export type ProgressMessage = {
 
 export class ProgressStreamManager {
   progressStreams: ProgressStreamType;
-  private queue: Queue | null;
 
-  constructor(progressStreams: ProgressStreamType, queue?: Queue) {
+  constructor(progressStreams: ProgressStreamType) {
     this.progressStreams = progressStreams;
-    this.queue = queue || null;
   }
 
   getStream(jobId: string) {
@@ -34,18 +31,10 @@ export class ProgressStreamManager {
     }
   }
 
-  async emitProgress(jobId: string, percent: number) {
+  emitProgress(jobId: string, percent: number) {
     const stream = this.progressStreams.get(jobId);
     if (stream) {
       stream.next({ type: 'progress', data: { percent } });
-    }
-
-    if (this.queue) {
-      await this.queue.add('progress', {
-        jobId,
-        type: 'progress',
-        data: { percent },
-      });
     }
   }
 

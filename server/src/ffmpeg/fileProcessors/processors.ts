@@ -1,7 +1,7 @@
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import path from 'path';
-import { Logger, NotAcceptableException } from '@nestjs/common';
+import { NotAcceptableException } from '@nestjs/common';
 import { CodecProfile } from '../ffmpeg.types';
 import { ALL_FORMATS, AUDIO_CODEC_MAP } from '../ffmpeg.constants';
 import getFileExtension from '../helpers/getFileExtension';
@@ -132,7 +132,7 @@ export default class processors {
     outputPath: string,
     options: string,
     convertTo: string,
-    onProgress?: (percent: number) => Promise<void>,
+    onProgress?: (percent: number) => void | Promise<void>,
   ): Promise<{ command: ReturnType<typeof ffmpeg>; cleanupTargets: string[] }> {
     // check if file format is allowed
     this.isFileAllowed(inputPath, ALL_FORMATS);
@@ -167,18 +167,23 @@ export default class processors {
           .on('progress', (progress) => {
             if (progress.percent && onProgress) {
               const scaledPercent = Math.floor(progress.percent / 2);
-
-              onProgress(scaledPercent).catch(() => {
-                /* empty */
-              });
+              const result = onProgress(scaledPercent);
+              if (result instanceof Promise) {
+                result.catch(() => {
+                  /* empty */
+                });
+              }
             }
           })
           .on('end', () => {
             // First step complete, emit 50%
             if (onProgress) {
-              onProgress(50).catch(() => {
-                /* empty */
-              });
+              const result = onProgress(50);
+              if (result instanceof Promise) {
+                result.catch(() => {
+                  /* empty */
+                });
+              }
             }
             resolve();
           })
