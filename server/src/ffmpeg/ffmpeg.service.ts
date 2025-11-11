@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+
 import { promises as fs } from 'fs';
 import { ReplaySubject } from 'rxjs';
 import { FfmpegCommand } from 'fluent-ffmpeg';
@@ -29,6 +32,8 @@ type JobRecord = {
   command: FfmpegCommand;
   cleanupTargets: string[];
   cancelled: boolean;
+  type?: string;
+  options?: string;
 };
 
 @Injectable()
@@ -39,9 +44,20 @@ export class FfmpegService {
     string,
     ReplaySubject<ProgressMessage>
   >();
-  private readonly manager = new ProgressStreamManager(this.progressStreams);
+  private readonly manager: ProgressStreamManager;
 
   private readonly jobs = new Map<string, JobRecord>();
+
+  constructor(@InjectQueue('processing') private processingQueue: Queue) {
+    this.manager = new ProgressStreamManager(
+      this.progressStreams,
+      this.processingQueue,
+    );
+  }
+
+  logProgress(percent: number) {
+    this.logger.log(`Processing: ${Math.floor(percent)}% done`);
+  }
 
   async handle(
     file: Express.Multer.File,
@@ -66,13 +82,33 @@ export class FfmpegService {
         ? 'application/zip'
         : mime.lookup(convertTo) || 'application/octet-stream';
 
+      const progressCallback = jobId
+        ? async (percent: number) => {
+            this.logProgress(percent);
+            await this.manager.emitProgress(jobId, percent).catch(() => {});
+          }
+        : undefined;
+
       const { command, cleanupTargets: additionalCleanupTargets } =
-        await buildCommand(inputPath, outputTarget, type, options, convertTo);
+        await buildCommand(
+          inputPath,
+          outputTarget,
+          type,
+          options,
+          convertTo,
+          progressCallback,
+        );
       if (additionalCleanupTargets)
         cleanupTargets.push(...additionalCleanupTargets);
 
       if (jobId)
-        this.jobs.set(jobId, { command, cleanupTargets, cancelled: false });
+        this.jobs.set(jobId, {
+          command,
+          cleanupTargets,
+          cancelled: false,
+          type,
+          options,
+        });
 
       await this.executeCommand(command, jobId);
 
@@ -156,11 +192,15 @@ export class FfmpegService {
 
   private initProgress(jobId: string) {
     this.manager.initProgress(jobId);
-    this.manager.emitProgress(jobId, 0);
+    this.manager.emitProgress(jobId, 0).catch(() => {
+      /* empty */
+    });
   }
 
   private completeProgress(jobId: string) {
-    this.manager.emitProgress(jobId, 100);
+    this.manager.emitProgress(jobId, 100).catch(() => {
+      /* empty */
+    });
     this.manager.completeProgress(jobId);
   }
 
@@ -199,11 +239,31 @@ export class FfmpegService {
         })
         .on('progress', (progress) => {
           if (progress.percent) {
-            this.logger.log(
-              `Processing: ${Math.floor(progress.percent)}% done`,
-            );
-            if (jobId && progress.percent >= 0)
-              this.manager.emitProgress(jobId, Math.floor(progress.percent));
+            this.logProgress(progress.percent);
+            if (jobId && progress.percent >= 0) {
+              const job = this.jobs.get(jobId);
+
+              const isVideoImage = job?.type === 'video_image';
+              let needsToSteps = false;
+              if (isVideoImage && job.options) {
+                try {
+                  const parsedOptions = JSON.parse(job.options);
+                  needsToSteps = !!(
+                    parsedOptions.fps || parsedOptions.resolution
+                  );
+                } catch {
+                  /* empty */
+                }
+              }
+              let finalPercent = Math.floor(progress.percent);
+              if (needsToSteps) {
+                finalPercent = 50 + Math.floor(progress.percent / 2);
+              }
+
+              this.manager.emitProgress(jobId, finalPercent).catch(() => {
+                /* empty */
+              });
+            }
           }
         })
         .on('end', () => resolve())

@@ -1,7 +1,7 @@
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import path from 'path';
-import { NotAcceptableException } from '@nestjs/common';
+import { Logger, NotAcceptableException } from '@nestjs/common';
 import { CodecProfile } from '../ffmpeg.types';
 import { ALL_FORMATS, AUDIO_CODEC_MAP } from '../ffmpeg.constants';
 import getFileExtension from '../helpers/getFileExtension';
@@ -132,6 +132,7 @@ export default class processors {
     outputPath: string,
     options: string,
     convertTo: string,
+    onProgress?: (percent: number) => Promise<void>,
   ): Promise<{ command: ReturnType<typeof ffmpeg>; cleanupTargets: string[] }> {
     // check if file format is allowed
     this.isFileAllowed(inputPath, ALL_FORMATS);
@@ -163,7 +164,24 @@ export default class processors {
           .on('error', (error: Error) => {
             reject(error);
           })
-          .on('end', () => resolve())
+          .on('progress', (progress) => {
+            if (progress.percent && onProgress) {
+              const scaledPercent = Math.floor(progress.percent / 2);
+
+              onProgress(scaledPercent).catch(() => {
+                /* empty */
+              });
+            }
+          })
+          .on('end', () => {
+            // First step complete, emit 50%
+            if (onProgress) {
+              onProgress(50).catch(() => {
+                /* empty */
+              });
+            }
+            resolve();
+          })
           .run();
       });
 

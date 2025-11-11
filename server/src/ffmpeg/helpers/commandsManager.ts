@@ -7,6 +7,7 @@ export async function buildCommand(
   type: string,
   options: string,
   convertTo: string,
+  onProgress?: (percent: number) => Promise<void>,
 ): Promise<{ command: FfmpegCommand; cleanupTargets?: string[] }> {
   switch (type) {
     case 'video_audio':
@@ -26,7 +27,13 @@ export async function buildCommand(
     case 'video_video':
       return processors.videoToVideo(inputPath, outputPath, options);
     case 'video_image':
-      return processors.videoToImage(inputPath, outputPath, options, convertTo);
+      return processors.videoToImage(
+        inputPath,
+        outputPath,
+        options,
+        convertTo,
+        onProgress,
+      );
     default:
       throw new Error(`Unsupported process type: ${type}`);
   }
