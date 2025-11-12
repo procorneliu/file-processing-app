@@ -1,8 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
-
 import { promises as fs } from 'fs';
 import { ReplaySubject } from 'rxjs';
 import { FfmpegCommand } from 'fluent-ffmpeg';
@@ -48,7 +45,7 @@ export class FfmpegService {
 
   private readonly jobs = new Map<string, JobRecord>();
 
-  constructor(@InjectQueue('processing') private processingQueue: Queue) {
+  constructor() {
     this.manager = new ProgressStreamManager(this.progressStreams);
   }
 
