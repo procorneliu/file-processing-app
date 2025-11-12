@@ -34,6 +34,12 @@ function DropZone() {
           'Something went wrong with file uploading. Please try another one!',
         );
 
+      // limit upload file size.
+      const limitSize = 2 * 1024 * 1024 * 1024; // 2GB
+      if (nextFile.size > limitSize) {
+        return setError('File size is too big. Limit is 2GB!');
+      }
+
       const fileFormat = nextFile && getFileExtension(nextFile.name);
       // check if uploaded file format is supported
       const isExtensionAllowed = fileFormat

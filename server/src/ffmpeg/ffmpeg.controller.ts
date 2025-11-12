@@ -15,7 +15,7 @@ import {
 import type { Request } from 'express';
 import { FfmpegService } from './ffmpeg.service';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { memoryStorage } from 'multer';
+import { diskStorage } from 'multer';
 import { Observable } from 'rxjs';
 
 @Controller('process')
@@ -25,7 +25,17 @@ export class FfmpegController {
   @Post()
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: memoryStorage(),
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          cb(null, './s');
+        },
+        filename: (req, file, cb) => {
+          cb(null, file.originalname);
+        },
+      }),
+      limits: {
+        fileSize: 2 * 1024 * 1024 * 1024, // 2GB limit
+      },
     }),
   )
   async processFile(
