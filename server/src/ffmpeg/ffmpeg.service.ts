@@ -25,7 +25,7 @@ type HandlePromiseReturn = {
   mimeType: string;
 };
 
-type JobRecord = {
+export type JobRecord = {
   command: FfmpegCommand;
   cleanupTargets: string[];
   cancelled: boolean;
@@ -50,7 +50,7 @@ export class FfmpegService {
   }
 
   logProgress(percent: number) {
-    this.logger.log(`Processing: ${Math.floor(percent)}% done`);
+    this.logger.log(`Processing: ${percent}% done`);
   }
 
   async handle(
@@ -90,6 +90,8 @@ export class FfmpegService {
           type,
           options,
           convertTo,
+          jobId,
+          this.jobs,
           progressCallback,
         );
       if (additionalCleanupTargets)
@@ -229,7 +231,9 @@ export class FfmpegService {
         })
         .on('progress', (progress) => {
           if (progress.percent) {
-            this.logProgress(progress.percent);
+            const calculatedPercent = Math.floor(50 + progress.percent / 2);
+            this.logProgress(calculatedPercent);
+
             if (jobId && progress.percent >= 0) {
               const job = this.jobs.get(jobId);
 

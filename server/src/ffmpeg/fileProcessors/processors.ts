@@ -6,6 +6,7 @@ import { CodecProfile } from '../ffmpeg.types';
 import { ALL_FORMATS, AUDIO_CODEC_MAP } from '../ffmpeg.constants';
 import getFileExtension from '../helpers/getFileExtension';
 import { createTempOutputPath } from '../helpers/outputNamer';
+import { JobRecord } from '../ffmpeg.service';
 
 type ProcessingOptions = {
   bitrate?: string;
@@ -132,6 +133,8 @@ export default class processors {
     outputPath: string,
     options: string,
     convertTo: string,
+    jobId: string,
+    jobs: Map<string, JobRecord>,
     onProgress?: (percent: number) => void | Promise<void>,
   ): Promise<{ command: ReturnType<typeof ffmpeg>; cleanupTargets: string[] }> {
     // check if file format is allowed
@@ -159,11 +162,14 @@ export default class processors {
         options,
       ).command;
 
+      jobs.set(jobId, {
+        command: videoCommand,
+        cleanupTargets,
+        cancelled: false,
+      });
+
       await new Promise<void>((resolve, reject) => {
         videoCommand
-          .on('error', (error: Error) => {
-            reject(error);
-          })
           .on('progress', (progress) => {
             if (progress.percent && onProgress) {
               const scaledPercent = Math.floor(progress.percent / 2);
@@ -174,6 +180,9 @@ export default class processors {
                 });
               }
             }
+          })
+          .on('error', (error: Error) => {
+            reject(error);
           })
           .on('end', () => {
             // First step complete, emit 50%

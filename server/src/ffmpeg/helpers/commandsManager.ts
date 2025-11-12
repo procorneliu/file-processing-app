@@ -1,3 +1,4 @@
+import { JobRecord } from '../ffmpeg.service';
 import processors from '../fileProcessors/processors';
 import { FfmpegCommand } from 'fluent-ffmpeg';
 
@@ -7,6 +8,8 @@ export async function buildCommand(
   type: string,
   options: string,
   convertTo: string,
+  jobId: string,
+  jobs: Map<string, JobRecord>,
   onProgress?: (percent: number) => void | Promise<void>,
 ): Promise<{ command: FfmpegCommand; cleanupTargets?: string[] }> {
   switch (type) {
@@ -32,6 +35,8 @@ export async function buildCommand(
         outputPath,
         options,
         convertTo,
+        jobId,
+        jobs,
         onProgress,
       );
     default:
