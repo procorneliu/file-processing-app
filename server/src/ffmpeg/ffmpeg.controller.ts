@@ -47,12 +47,22 @@ export class FfmpegController {
       throw new HttpException('', HttpStatus.NO_CONTENT);
     }
 
-    const { buffer, filename, mimeType } = result;
-    return new StreamableFile(buffer, {
-      type: mimeType,
-      disposition: `attachment; filename="${encodeURIComponent(filename)}"`,
-      length: buffer.length,
-    });
+    const { buffer, filename, mimeType, length } = result;
+
+    // StreamableFile accepts both Buffer and Readable, but TypeScript needs explicit handling
+    if (Buffer.isBuffer(buffer)) {
+      return new StreamableFile(buffer, {
+        type: mimeType,
+        disposition: `attachment; filename="${encodeURIComponent(filename)}"`,
+        length: buffer.length,
+      });
+    } else {
+      return new StreamableFile(buffer, {
+        type: mimeType,
+        disposition: `attachment; filename="${encodeURIComponent(filename)}"`,
+        length: length,
+      });
+    }
   }
 
   @Post('cancel/:id')

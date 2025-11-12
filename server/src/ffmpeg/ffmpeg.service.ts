@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { promises as fs } from 'fs';
+import { createReadStream } from 'fs';
+import { Readable } from 'stream';
 import { ReplaySubject } from 'rxjs';
 import { FfmpegCommand } from 'fluent-ffmpeg';
 import mime from 'mime-types';
@@ -20,9 +22,10 @@ import {
 } from './helpers/progressManager';
 
 type HandlePromiseReturn = {
-  buffer: Buffer;
+  buffer: Buffer | Readable;
   filename: string;
   mimeType: string;
+  length?: number;
 };
 
 export type JobRecord = {
@@ -115,7 +118,7 @@ export class FfmpegService {
       // For video_image, use .zip extension for the filename
       const outputExtension = type === 'video_image' ? 'zip' : convertTo;
       const filename = buildOutputName(file.originalname, outputExtension);
-      const buffer = await this.readResult(
+      const { buffer, length: fileLength } = await this.readResult(
         outputTarget,
         isFrameExtraction,
         convertTo,
@@ -124,9 +127,15 @@ export class FfmpegService {
 
       if (jobId) this.completeProgress(jobId);
 
-      this.logger.log('Processing DONE! Output size:', buffer.length);
+      const size = Buffer.isBuffer(buffer) ? buffer.length : fileLength || 0;
+      this.logger.log('Processing DONE! Output size:', size);
 
-      return { buffer, filename, mimeType };
+      return {
+        buffer,
+        filename,
+        mimeType,
+        length: Buffer.isBuffer(buffer) ? buffer.length : fileLength,
+      };
     } catch (err) {
       if (jobId && this.jobs.get(jobId)?.cancelled) {
         return null;
@@ -174,16 +183,25 @@ export class FfmpegService {
     isFrameExtraction: boolean,
     convertTo: string,
     cleanupTargets: string[],
-  ): Promise<Buffer> {
+  ): Promise<{ buffer: Buffer | Readable; length?: number }> {
     if (!isFrameExtraction) {
-      return fs.readFile(outputTarget);
+      const buffer = await fs.readFile(outputTarget);
+      return { buffer, length: buffer.length };
     }
-
     const zipPath = createTempOutputPath('zip');
     cleanupTargets.push(zipPath);
 
+    // FIXME: takes too long to zip archive
     await archiveFramesDirectory(outputTarget, zipPath);
-    return fs.readFile(zipPath);
+
+    // Get file size for zip files
+    const stats = await fs.stat(zipPath);
+
+    // Use stream for zip files to avoid loading large files into memory
+    return {
+      buffer: createReadStream(zipPath),
+      length: stats.size,
+    };
   }
 
   private initProgress(jobId: string) {

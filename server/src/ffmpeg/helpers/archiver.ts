@@ -1,25 +1,24 @@
-import AdmZip from 'adm-zip';
-import { promises as fs } from 'fs';
-import path from 'path';
+import archiver from 'archiver';
+import fs from 'fs';
 
 export async function archiveFramesDirectory(
   sourceDir: string,
   zipPath: string,
-) {
-  const zip = new AdmZip();
-  const entries = await fs.readdir(sourceDir);
+): Promise<void> {
+  // create a file to stream archive data to.
+  const output = fs.createWriteStream(zipPath, { highWaterMark: 1024 * 1024 });
+  const archive = archiver('zip', {
+    zlib: { level: 9 }, // Sets the compression level
+  });
 
-  entries.sort();
+  const done = new Promise<void>((resolve, reject) => {
+    output.on('close', () => resolve());
+    archive.on('error', (err) => reject(err));
+  });
 
-  for (const name of entries) {
-    const entryPath = path.join(sourceDir, name);
-    const stats = await fs.stat(entryPath);
+  archive.pipe(output);
+  archive.directory(sourceDir, false);
 
-    if (stats.isFile()) {
-      zip.addLocalFile(entryPath, '', name);
-    }
-  }
-
-  const zipBuffer = zip.toBuffer();
-  await fs.writeFile(zipPath, zipBuffer);
+  await archive.finalize();
+  await done;
 }
