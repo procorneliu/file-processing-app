@@ -25,6 +25,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/devtools-integration": "^0.2.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/throttler": "^6.4.0",
     "archiver": "^7.0.1",
     "ffmpeg-static": "^5.2.0",
     "fluent-ffmpeg": "^2.1.3",
