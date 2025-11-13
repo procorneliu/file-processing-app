@@ -21,9 +21,19 @@ export function buildOutputName(inputName: string, extension: string) {
 // WRITE TEMPORARY INPUT PATH ON LOCAL MACHINE
 export async function writeTempInput(file: Express.Multer.File) {
   const extension =
-    path.extname(file.originalname) || this.extensionFromMime(file.mimetype);
+    path.extname(file.originalname) || extensionFromMime(file.mimetype);
   const tempPath = path.join(tmpdir(), `${randomUUID()}${extension || '.tmp'}`);
-  await fs.writeFile(tempPath, file.buffer);
+  
+  // If file was saved to disk (diskStorage), use file.path
+  // Otherwise, use file.buffer (memoryStorage)
+  if (file.path) {
+    await fs.copyFile(file.path, tempPath);
+  } else if (file.buffer) {
+    await fs.writeFile(tempPath, file.buffer);
+  } else {
+    throw new Error('File has neither path nor buffer');
+  }
+  
   return tempPath;
 }
 

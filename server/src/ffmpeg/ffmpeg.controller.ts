@@ -17,6 +17,8 @@ import { FfmpegService } from './ffmpeg.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { Observable } from 'rxjs';
+import path from 'path';
+import { mkdirSync } from 'fs';
 
 @Controller('process')
 export class FfmpegController {
@@ -26,10 +28,16 @@ export class FfmpegController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: (req, file, cb) => {
-          cb(null, './s');
+        destination: function (req, file, cb) {
+          const outDir = path.join(__dirname, 'uploads');
+          try {
+            mkdirSync(outDir, { recursive: true });
+            cb(null, outDir);
+          } catch (error) {
+            cb(error as Error, '');
+          }
         },
-        filename: (req, file, cb) => {
+        filename: function (req, file, cb) {
           cb(null, file.originalname);
         },
       }),
