@@ -19,6 +19,6 @@ export async function archiveFramesDirectory(
   archive.pipe(output);
   archive.directory(sourceDir, false);
 
-  await archive.finalize();
   await done;
+  await archive.finalize();
 }
