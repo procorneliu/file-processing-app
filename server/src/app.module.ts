@@ -5,6 +5,7 @@ import { FfmpegModule } from './ffmpeg/ffmpeg.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AuthModule } from './auth/auth.module';
       isGlobal: true,
     }),
     AuthModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

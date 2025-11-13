@@ -20,6 +20,7 @@ import {
   ProgressMessage,
   ProgressStreamManager,
 } from './helpers/progressManager';
+import { StorageService } from 'src/storage/storage.service';
 
 type HandlePromiseReturn = {
   buffer: Buffer | Readable;
@@ -48,7 +49,7 @@ export class FfmpegService {
 
   private readonly jobs = new Map<string, JobRecord>();
 
-  constructor() {
+  constructor(private storageService: StorageService) {
     this.manager = new ProgressStreamManager(this.progressStreams);
   }
 
@@ -109,7 +110,7 @@ export class FfmpegService {
           options,
         });
 
-      await this.executeCommand(command, jobId);
+      await this.executeCommand(command, file, jobId);
 
       if (jobId && this.jobs.get(jobId)?.cancelled) {
         return null;
@@ -124,7 +125,11 @@ export class FfmpegService {
       // For video_image, use .zip extension for the filename
       const outputExtension = type === 'video_image' ? 'zip' : convertTo;
       const filename = buildOutputName(file.originalname, outputExtension);
-      const { buffer, length: fileLength } = await this.readResult(
+      const {
+        buffer,
+        length: fileLength,
+        filePath,
+      } = await this.readResult(
         outputTarget,
         isFrameExtraction,
         convertTo,
@@ -132,9 +137,24 @@ export class FfmpegService {
         jobId,
       );
 
-      if (jobId) this.completeProgress(jobId);
-
       const size = Buffer.isBuffer(buffer) ? buffer.length : fileLength || 0;
+
+      if (Buffer.isBuffer(buffer)) {
+        this.storageService
+          .uploadFile(buffer, filename, size)
+          .catch((err) => this.logger.error('S3 upload failed', err));
+      } else {
+        if (filePath) {
+          const s3Stream = createReadStream(filePath);
+          this.storageService
+            .uploadFile(s3Stream, filename, size)
+            .catch((err) => this.logger.error('S3 upload failed', err));
+        } else {
+          this.logger.warn('No file path available for S3 upload');
+        }
+      }
+
+      if (jobId) this.completeProgress(jobId);
       this.logger.log('Processing DONE! Output size:', size);
 
       return {
@@ -191,8 +211,24 @@ export class FfmpegService {
     convertTo: string,
     cleanupTargets: string[],
     jobId?: string,
-  ): Promise<{ buffer: Buffer | Readable; length?: number }> {
+  ): Promise<{
+    buffer: Buffer | Readable;
+    length?: number;
+    filePath?: string;
+  }> {
     if (!isFrameExtraction) {
+      const stats = await fs.stat(outputTarget);
+      const fileSizeInMb = stats.size / (1024 * 1024);
+
+      if (fileSizeInMb > 100) {
+        // Use stream for zip files to avoid loading large files into memory
+        return {
+          buffer: createReadStream(outputTarget),
+          length: stats.size,
+          filePath: outputTarget,
+        };
+      }
+
       const buffer = await fs.readFile(outputTarget);
       return { buffer, length: buffer.length };
     }
@@ -219,6 +255,7 @@ export class FfmpegService {
     return {
       buffer: createReadStream(zipPath),
       length: stats.size,
+      filePath: zipPath,
     };
   }
 
@@ -254,7 +291,11 @@ export class FfmpegService {
     await cleanUp(cleanupTargets);
   }
 
-  private executeCommand(command: FfmpegCommand, jobId?: string) {
+  private async executeCommand(
+    command: FfmpegCommand,
+    file: Express.Multer.File,
+    jobId?: string,
+  ) {
     return new Promise<void>((resolve, reject) => {
       command
         .on('error', (error: Error) => {
