@@ -141,13 +141,13 @@ export class FfmpegService {
 
       if (Buffer.isBuffer(buffer)) {
         this.storageService
-          .uploadFile(buffer, filename, size)
+          .uploadMultipart(buffer, filename)
           .catch((err) => this.logger.error('S3 upload failed', err));
       } else {
         if (filePath) {
           const s3Stream = createReadStream(filePath);
           this.storageService
-            .uploadFile(s3Stream, filename, size)
+            .uploadMultipart(s3Stream, filename)
             .catch((err) => this.logger.error('S3 upload failed', err));
         } else {
           this.logger.warn('No file path available for S3 upload');
