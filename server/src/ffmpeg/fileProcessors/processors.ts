@@ -8,6 +8,8 @@ import getFileExtension from '../helpers/getFileExtension';
 import { createTempOutputPath } from '../helpers/outputNamer';
 import { JobRecord } from '../ffmpeg.service';
 
+const MAX_VIDEO_IMAGE_DURATION_SECONDS = 10 * 60;
+
 type ProcessingOptions = {
   bitrate?: string;
   resolution?: string;
@@ -67,6 +69,40 @@ export default class processors {
     });
 
     return result;
+  }
+
+  static async getFileDurationInSeconds(
+    filePath: string,
+  ): Promise<number | null> {
+    const asNumber = (value: unknown) => {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+    };
+
+    const duration = await new Promise<number | null>((resolve, reject) => {
+      ffmpeg(filePath).ffprobe((err: Error, metadata) => {
+        if (err) {
+          console.log(err);
+          reject(err);
+          return;
+        }
+
+        const formatDuration = asNumber(metadata.format?.duration);
+        if (formatDuration) {
+          resolve(formatDuration);
+          return;
+        }
+
+        const videoStream = metadata.streams.find(
+          (stream) =>
+            stream.codec_type === 'video' && asNumber(stream.duration),
+        );
+
+        resolve(videoStream ? asNumber(videoStream.duration) : null);
+      });
+    });
+
+    return duration;
   }
 
   static async convertToAudio(
@@ -143,6 +179,16 @@ export default class processors {
     const { resolution, fps }: ProcessingOptions = options
       ? JSON.parse(options)
       : {};
+
+    const durationSeconds = await this.getFileDurationInSeconds(inputPath);
+    if (
+      durationSeconds !== null &&
+      durationSeconds > MAX_VIDEO_IMAGE_DURATION_SECONDS
+    ) {
+      throw new NotAcceptableException(
+        'Video-to-image conversion only supports videos up to 10 minutes long.',
+      );
+    }
 
     let actualInputPath = inputPath;
     const cleanupTargets: string[] = [];

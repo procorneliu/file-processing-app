@@ -66,7 +66,7 @@ export class FfmpegService {
   ): Promise<HandlePromiseReturn | null> {
     const inputPath = await writeTempInput(file);
     const cleanupTargets: string[] = [inputPath];
-
+    console.log(type);
     if (jobId) this.initProgress(jobId);
 
     try {

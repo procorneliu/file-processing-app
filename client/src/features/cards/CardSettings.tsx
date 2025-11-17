@@ -83,7 +83,11 @@ function CardSettings() {
       )}
 
       {showVideoSettings && (
-        <VideoSettings options={fileOptions} onChange={setFileOptions} />
+        <VideoSettings
+          options={fileOptions}
+          onChange={setFileOptions}
+          isVideoImage={processType === 'video_image'}
+        />
       )}
 
       {!processedFile && (
