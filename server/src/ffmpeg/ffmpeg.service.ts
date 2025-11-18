@@ -162,6 +162,11 @@ export class FfmpegService {
       this.logger.log('Processing DONE! Output size:', size);
 
       if (generateLink) {
+        if (size <= 0) {
+          throw new Error(
+            `Cannot upload file ${filename} to S3: file size must be greater than 0 bytes`,
+          );
+        }
         await this.storageService.uploadMultipart(buffer, filename);
         downloadUrl = await this.storageService.generatePresignedUrl(filename);
 

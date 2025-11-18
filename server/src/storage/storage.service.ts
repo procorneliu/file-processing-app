@@ -38,6 +38,12 @@ export class StorageService {
     filename: string,
     contentLength: number,
   ) {
+    if (contentLength <= 0) {
+      throw new BadRequestException(
+        `Cannot upload file ${filename}: file size must be greater than 0 bytes`,
+      );
+    }
+
     try {
       this.logger.log(
         `Starting S3 upload: ${filename} (${contentLength} bytes, type: ${Buffer.isBuffer(file) ? 'Buffer' : 'Stream'})`,
@@ -61,6 +67,12 @@ export class StorageService {
 
   async uploadMultipart(file: Buffer | Readable, filename: string) {
     const contentLength = Buffer.isBuffer(file) ? file.length : undefined;
+
+    if (contentLength !== undefined && contentLength <= 0) {
+      throw new BadRequestException(
+        `Cannot upload file ${filename}: file size must be greater than 0 bytes`,
+      );
+    }
 
     const minPartSize = 8 * 1024 * 1024; // 8 MB
     const dynamicPartSize =
