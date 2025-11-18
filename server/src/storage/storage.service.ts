@@ -1,13 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-  // CreateMultipartUploadCommand,
-  // UploadPartCommand,
-  // CompleteMultipartUploadCommand,
-  // AbortMultipartUploadCommand,
-} from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
@@ -31,38 +23,6 @@ export class StorageService {
     });
 
     this.bucketName = this.configService.getOrThrow<string>('AWS_BUCKET_NAME');
-  }
-
-  async uploadFile(
-    file: Buffer | Readable,
-    filename: string,
-    contentLength: number,
-  ) {
-    if (contentLength <= 0) {
-      throw new BadRequestException(
-        `Cannot upload file ${filename}: file size must be greater than 0 bytes`,
-      );
-    }
-
-    try {
-      this.logger.log(
-        `Starting S3 upload: ${filename} (${contentLength} bytes, type: ${Buffer.isBuffer(file) ? 'Buffer' : 'Stream'})`,
-      );
-
-      const command = new PutObjectCommand({
-        Bucket: this.bucketName,
-        Key: filename,
-        Body: file,
-        ...(Buffer.isBuffer(file) && contentLength
-          ? { ContentLength: contentLength }
-          : {}),
-      });
-
-      await this.s3.send(command);
-      this.logger.log(`S3 upload successful: ${filename}`);
-    } catch (err) {
-      throw new BadRequestException('Uploading file S3 bucket failed!', err);
-    }
   }
 
   async uploadMultipart(file: Buffer | Readable, filename: string) {
