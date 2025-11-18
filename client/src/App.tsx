@@ -3,6 +3,7 @@ import Home from './pages/Home';
 import FileEditor from './pages/FileEditor';
 import { FileProvider } from './contexts/FileContext';
 import { CardProvider } from './contexts/CardContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 const router = createBrowserRouter([
   {
@@ -22,11 +23,13 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <FileProvider>
-      <CardProvider>
-        <RouterProvider router={router} />
-      </CardProvider>
-    </FileProvider>
+    <AuthProvider>
+      <FileProvider>
+        <CardProvider>
+          <RouterProvider router={router} />
+        </CardProvider>
+      </FileProvider>
+    </AuthProvider>
   );
 }
 export default App;

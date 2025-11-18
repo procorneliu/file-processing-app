@@ -1,8 +1,12 @@
 import type React from 'react';
+import AuthButton from '../components/AuthButton';
 
 function MainContainer({ children }: { children: React.ReactNode }) {
   return (
-    <main className="flex h-screen w-screen items-start justify-center overflow-scroll bg-linear-to-br from-gray-900 to-gray-950 pb-10">
+    <main className="relative flex h-screen w-screen items-start justify-center overflow-scroll bg-linear-to-br from-gray-900 to-gray-950 pb-10">
+      <div className="absolute right-4 top-4 z-10">
+        <AuthButton />
+      </div>
       {children}
     </main>
   );
