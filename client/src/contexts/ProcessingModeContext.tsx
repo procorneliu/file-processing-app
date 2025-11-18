@@ -10,6 +10,7 @@ import {
 type ProcessingModeContextType = {
   generateDownloadLink: boolean;
   setGenerateDownloadLink: Dispatch<SetStateAction<boolean>>;
+  hasChosenMode: boolean;
 };
 
 const ProcessingModeContext = createContext<
@@ -18,10 +19,22 @@ const ProcessingModeContext = createContext<
 
 function ProcessingModeProvider({ children }: { children: ReactNode }) {
   const [generateDownloadLink, setGenerateDownloadLink] = useState(false);
+  const [hasChosenMode, setHasChosenMode] = useState(false);
+
+  const handleSetGenerateDownloadLink: Dispatch<SetStateAction<boolean>> = (
+    value,
+  ) => {
+    setGenerateDownloadLink(value);
+    setHasChosenMode(true);
+  };
 
   return (
     <ProcessingModeContext.Provider
-      value={{ generateDownloadLink, setGenerateDownloadLink }}
+      value={{
+        generateDownloadLink,
+        setGenerateDownloadLink: handleSetGenerateDownloadLink,
+        hasChosenMode,
+      }}
     >
       {children}
     </ProcessingModeContext.Provider>
