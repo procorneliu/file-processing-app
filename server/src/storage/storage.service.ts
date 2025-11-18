@@ -1,9 +1,14 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  GetObjectCommand,
+  CompleteMultipartUploadCommandOutput,
+} from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class StorageService {
@@ -25,12 +30,24 @@ export class StorageService {
     this.bucketName = this.configService.getOrThrow<string>('AWS_BUCKET_NAME');
   }
 
-  async uploadMultipart(file: Buffer | Readable, filename: string) {
+  async uploadMultipart(
+    file: Buffer | Readable,
+    filename: string,
+  ): Promise<{
+    result: CompleteMultipartUploadCommandOutput;
+    filename: string;
+  }> {
+    // Generate a random filename if the name part is empty
+    const [isFilename, extension] = filename.split('.');
+    const finalFilename = isFilename.trim()
+      ? filename
+      : `${randomUUID()}.${extension}`;
+
     const contentLength = Buffer.isBuffer(file) ? file.length : undefined;
 
     if (contentLength !== undefined && contentLength <= 0) {
       throw new BadRequestException(
-        `Cannot upload file ${filename}: file size must be greater than 0 bytes`,
+        `Cannot upload file ${finalFilename}: file size must be greater than 0 bytes`,
       );
     }
 
@@ -45,7 +62,7 @@ export class StorageService {
         client: this.s3,
         params: {
           Bucket: this.bucketName,
-          Key: filename,
+          Key: finalFilename,
           Body: file,
         },
         partSize: dynamicPartSize,
@@ -54,12 +71,12 @@ export class StorageService {
       });
 
       this.logger.log(
-        `Starting S3 upload: ${filename} (${contentLength} bytes, type: ${Buffer.isBuffer(file) ? 'Buffer' : 'Stream'})`,
+        `Starting S3 upload: ${finalFilename} (${contentLength} bytes, type: ${Buffer.isBuffer(file) ? 'Buffer' : 'Stream'})`,
       );
       const result = await upload.done();
-      this.logger.log(`S3 upload successful: ${filename}`);
+      this.logger.log(`S3 upload successful: ${finalFilename}`);
 
-      return result;
+      return { result, filename: finalFilename };
     } catch (err) {
       throw new BadRequestException('Uploading file S3 bucket failed!', err);
     }
