@@ -1,14 +1,10 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../ui/Button';
 
 function AuthButton() {
-  const { user, isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="text-sm text-stone-400">Loading...</div>
-    );
-  }
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   if (isAuthenticated && user) {
     return (
@@ -20,10 +16,10 @@ function AuthButton() {
 
   return (
     <div className="flex gap-2">
-      <Button action={() => console.log('Login clicked')}>
+      <Button action={() => navigate('/login')}>
         Login
       </Button>
-      <Button action={() => console.log('Register clicked')}>
+      <Button action={() => navigate('/register')}>
         Register
       </Button>
     </div>
