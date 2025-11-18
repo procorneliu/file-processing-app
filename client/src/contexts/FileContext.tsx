@@ -12,8 +12,8 @@ export type ProcessedFile = {
 type FileContextType = {
   file: File | null;
   setFile: Dispatch<SetStateAction<File | null>>;
-  processedFile: ProcessedFile;
-  setProcessedFile: Dispatch<SetStateAction<ProcessedFile>>;
+  processedFile: ProcessedFile | null;
+  setProcessedFile: Dispatch<SetStateAction<ProcessedFile | null>>;
   convertTo: string;
   setConvertTo: Dispatch<SetStateAction<string>>;
   error: string | null;
@@ -35,7 +35,9 @@ const FileContext = createContext<FileContextType>({
 
 function FileProvider({ children }: { children: ReactNode }) {
   const [file, setFile] = useState<File | null>(null);
-  const [processedFile, setProcessedFile] = useState<ProcessedFile>(null);
+  const [processedFile, setProcessedFile] = useState<ProcessedFile | null>(
+    null,
+  );
   const [convertTo, setConvertTo] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 

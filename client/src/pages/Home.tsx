@@ -1,10 +1,13 @@
 import ButtonLink from '../ui/ButtonLink';
 import AuthButton from '../components/AuthButton';
+import { useProcessingMode } from '../contexts/ProcessingModeContext';
 
 function Home() {
+  const { setGenerateDownloadLink } = useProcessingMode();
+
   return (
     <main className="relative h-screen w-screen bg-linear-to-br from-gray-900 to-gray-950">
-      <div className="absolute right-4 top-4 z-10">
+      <div className="absolute top-4 right-4 z-10">
         <AuthButton />
       </div>
       <div className="flex h-full flex-col items-center justify-center space-y-3 text-center text-stone-50">
@@ -13,7 +16,14 @@ function Home() {
           From video or audio file to whatever you want. From changing file
           format to audio denoising.
         </p>
-        <ButtonLink>Start processing</ButtonLink>
+        <div className="flex gap-x-4">
+          <ButtonLink onClick={() => setGenerateDownloadLink(false)}>
+            Get Processed File
+          </ButtonLink>
+          <ButtonLink onClick={() => setGenerateDownloadLink(true)}>
+            Get Download Link
+          </ButtonLink>
+        </div>
       </div>
     </main>
   );

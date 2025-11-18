@@ -14,18 +14,20 @@ import { getFileExtension } from '../../utils/getFileExtension';
 import AudioSettings from './components/AudioSettings';
 import type { ProcessingOptions } from '../../hooks/useProcessingJob';
 import VideoSettings from './components/VideoSettings';
+import { useProcessingMode } from '../../contexts/ProcessingModeContext';
+import DownloadLink from '../../ui/DownloadLink';
 
 function CardSettings() {
   const { activeCard } = useCard();
   const { file, processedFile, setProcessedFile, fileType, convertTo } =
     useFile();
+  const { generateDownloadLink } = useProcessingMode();
   const { start, cancel, status, progress, error, download } =
     useProcessingJob();
   const [fileOptions, setFileOptions] = useState<ProcessingOptions>({
     bitrate: '192k',
     resolution: '1920x1080',
   });
-
   const rawFileExtension = file ? getFileExtension(file.name) : null;
   const fileExtension = rawFileExtension?.toUpperCase() ?? '...';
   const sourceExtension = rawFileExtension?.toLowerCase() ?? null;
@@ -98,7 +100,11 @@ function CardSettings() {
 
       {isProcessing && <ProgressBar progress={progress} />}
       {error && <ErrorMessage message={error} />}
-      {processedFile && <DownloadButton processedFile={processedFile} />}
+      {generateDownloadLink && processedFile && download ? (
+        <DownloadLink link={download.url} />
+      ) : (
+        <DownloadButton processedFile={processedFile} />
+      )}
     </div>
   );
 }

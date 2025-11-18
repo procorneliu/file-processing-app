@@ -2,12 +2,14 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   // CreateMultipartUploadCommand,
   // UploadPartCommand,
   // CompleteMultipartUploadCommand,
   // AbortMultipartUploadCommand,
 } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
 
@@ -88,6 +90,24 @@ export class StorageService {
       return result;
     } catch (err) {
       throw new BadRequestException('Uploading file S3 bucket failed!', err);
+    }
+  }
+
+  async generatePresignedUrl(
+    filename: string,
+    expiresIn: number = 3600,
+  ): Promise<string> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: filename,
+      });
+
+      const url = await getSignedUrl(this.s3, command, { expiresIn });
+      this.logger.log(`Generated presigned URL for: ${filename}`);
+      return url;
+    } catch (err) {
+      throw new BadRequestException('Generating presigned URL failed!', err);
     }
   }
 }

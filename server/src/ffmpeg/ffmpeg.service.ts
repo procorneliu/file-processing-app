@@ -27,6 +27,7 @@ type HandlePromiseReturn = {
   filename: string;
   mimeType: string;
   length?: number;
+  downloadUrl?: string;
 };
 
 export type JobRecord = {
@@ -62,11 +63,14 @@ export class FfmpegService {
     type: string,
     convertTo: string,
     options: string,
+    generateLink: boolean,
     jobId: string,
   ): Promise<HandlePromiseReturn | null> {
     const inputPath = await writeTempInput(file);
     const cleanupTargets: string[] = [inputPath];
-    console.log(type);
+
+    let downloadUrl: string;
+
     if (jobId) this.initProgress(jobId);
 
     try {
@@ -139,23 +143,36 @@ export class FfmpegService {
 
       const size = Buffer.isBuffer(buffer) ? buffer.length : fileLength || 0;
 
-      if (Buffer.isBuffer(buffer)) {
-        this.storageService
-          .uploadMultipart(buffer, filename)
-          .catch((err) => this.logger.error('S3 upload failed', err));
-      } else {
-        if (filePath) {
-          const s3Stream = createReadStream(filePath);
-          this.storageService
-            .uploadMultipart(s3Stream, filename)
-            .catch((err) => this.logger.error('S3 upload failed', err));
-        } else {
-          this.logger.warn('No file path available for S3 upload');
-        }
-      }
+      // if (Buffer.isBuffer(buffer)) {
+      //   this.storageService
+      //     .uploadMultipart(buffer, filename)
+      //     .catch((err) => this.logger.error('S3 upload failed', err));
+      // } else {
+      //   if (filePath) {
+      //     const s3Stream = createReadStream(filePath);
+      //     this.storageService
+      //       .uploadMultipart(s3Stream, filename)
+      //       .catch((err) => this.logger.error('S3 upload failed', err));
+      //   } else {
+      //     this.logger.warn('No file path available for S3 upload');
+      //   }
+      // }
 
       if (jobId) this.completeProgress(jobId);
       this.logger.log('Processing DONE! Output size:', size);
+
+      if (generateLink) {
+        await this.storageService.uploadMultipart(buffer, filename);
+        downloadUrl = await this.storageService.generatePresignedUrl(filename);
+
+        return {
+          buffer,
+          filename,
+          mimeType,
+          length: Buffer.isBuffer(buffer) ? buffer.length : fileLength,
+          downloadUrl,
+        };
+      }
 
       return {
         buffer,

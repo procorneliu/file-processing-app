@@ -11,19 +11,23 @@ export async function processFile(
   type: string,
   convertTo: string,
   jobId: string,
+  generateDownloadLink: string,
   options: ProcessingOptions,
 ): Promise<ExtractAudioResult | null> {
   const form = new FormData();
 
+  form.append('generateDownloadLink', String(generateDownloadLink));
   form.append('file', file);
   form.append('type', type);
   form.append('convertTo', convertTo);
   form.append('jobId', jobId);
   form.append('options', JSON.stringify(options));
 
+  const shouldGenerateLink = generateDownloadLink === 'true';
+
   const res = await axios.post(`${API_BASE}`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    responseType: 'blob',
+    responseType: shouldGenerateLink ? 'json' : 'blob',
     withCredentials: true,
   });
 
@@ -31,6 +35,16 @@ export async function processFile(
     return null;
   }
 
+  // If generateDownloadLink is true, expect JSON response with presigned URL
+  if (shouldGenerateLink) {
+    const data = res.data;
+    if (!data || !data.url || !data.filename) {
+      return null;
+    }
+    return { url: data.url, filename: data.filename };
+  }
+
+  // If generateDownloadLink is false, expect blob response for instant download
   const blob = res.data as Blob;
   if (!blob || blob.size === 0) {
     return null;

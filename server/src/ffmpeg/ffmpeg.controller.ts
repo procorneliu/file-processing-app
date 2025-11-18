@@ -12,13 +12,13 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import type { Request } from 'express';
-import { FfmpegService } from './ffmpeg.service';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { Observable } from 'rxjs';
-import path from 'path';
+import type { Request } from 'express';
 import { mkdirSync } from 'fs';
+import { diskStorage } from 'multer';
+import path from 'path';
+import { Observable } from 'rxjs';
+import { FfmpegService } from './ffmpeg.service';
 
 @Controller('process')
 export class FfmpegController {
@@ -49,15 +49,19 @@ export class FfmpegController {
   async processFile(
     @UploadedFile() file: Express.Multer.File,
     @Req() req: Request,
-  ): Promise<StreamableFile> {
+  ): Promise<StreamableFile | { url: string; filename: string }> {
     if (!file) throw new BadRequestException('File upload is required');
-    const { type, convertTo, jobId, options } = req.body;
+    const { type, convertTo, jobId, generateDownloadLink, options } = req.body;
     if (!jobId) throw new BadRequestException('JobId is required');
+
+    const generateLink = generateDownloadLink === 'true';
+
     const result = await this.ffmpegService.handle(
       file,
       type,
       convertTo,
       options,
+      generateLink,
       jobId,
     );
 
@@ -65,7 +69,14 @@ export class FfmpegController {
       throw new HttpException('', HttpStatus.NO_CONTENT);
     }
 
-    const { buffer, filename, mimeType, length } = result;
+    const { buffer, filename, mimeType, length, downloadUrl } = result;
+
+    if (generateLink && downloadUrl) {
+      return {
+        url: downloadUrl,
+        filename,
+      };
+    }
 
     // StreamableFile accepts both Buffer and Readable, but TypeScript needs explicit handling
     if (Buffer.isBuffer(buffer)) {

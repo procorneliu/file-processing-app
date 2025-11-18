@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useFile, type ProcessedFile } from '../contexts/FileContext';
 import axios, { AxiosError } from 'axios';
 import { processFile } from '../api/fileProcessing';
+import { useProcessingMode } from '../contexts/ProcessingModeContext';
 
 export const API_BASE = `http://localhost:3000/api/process`;
 
@@ -33,6 +34,7 @@ const noopMessage = (value?: string | null) =>
 
 export function useProcessingJob(): UseProcessingJobReturn {
   const { convertTo } = useFile();
+  const { generateDownloadLink } = useProcessingMode();
 
   const [status, setStatus] = useState<JobStatus>('idle');
   const [progress, setProgress] = useState(0);
@@ -137,7 +139,14 @@ export function useProcessingJob(): UseProcessingJobReturn {
       });
 
       try {
-        const result = await processFile(file, type, convertTo, jobId, options);
+        const result = await processFile(
+          file,
+          type,
+          convertTo,
+          jobId,
+          String(generateDownloadLink),
+          options,
+        );
 
         if (!result) {
           setStatus('cancelled');
@@ -167,7 +176,7 @@ export function useProcessingJob(): UseProcessingJobReturn {
         jobIdRef.current = null;
       }
     },
-    [cancel, cleanupEventSource, resetState, convertTo],
+    [cancel, cleanupEventSource, resetState, convertTo, generateDownloadLink],
   );
 
   return { start, cancel, status, progress, error, download };

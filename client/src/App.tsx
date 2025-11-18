@@ -8,6 +8,7 @@ import ResetPassword from './pages/ResetPassword';
 import { FileProvider } from './contexts/FileContext';
 import { CardProvider } from './contexts/CardContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { ProcessingModeProvider } from './contexts/ProcessingModeContext';
 
 const router = createBrowserRouter([
   {
@@ -44,11 +45,13 @@ const router = createBrowserRouter([
 function App() {
   return (
     <AuthProvider>
-      <FileProvider>
-        <CardProvider>
-          <RouterProvider router={router} />
-        </CardProvider>
-      </FileProvider>
+      <ProcessingModeProvider>
+        <FileProvider>
+          <CardProvider>
+            <RouterProvider router={router} />
+          </CardProvider>
+        </FileProvider>
+      </ProcessingModeProvider>
     </AuthProvider>
   );
 }
