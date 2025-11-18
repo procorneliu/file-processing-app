@@ -129,11 +129,7 @@ export class FfmpegService {
       // For video_image, use .zip extension for the filename
       const outputExtension = type === 'video_image' ? 'zip' : convertTo;
       const filename = buildOutputName(file.originalname, outputExtension);
-      const {
-        buffer,
-        length: fileLength,
-        filePath,
-      } = await this.readResult(
+      const { buffer, length: fileLength } = await this.readResult(
         outputTarget,
         isFrameExtraction,
         convertTo,
@@ -142,21 +138,6 @@ export class FfmpegService {
       );
 
       const size = Buffer.isBuffer(buffer) ? buffer.length : fileLength || 0;
-
-      // if (Buffer.isBuffer(buffer)) {
-      //   this.storageService
-      //     .uploadMultipart(buffer, filename)
-      //     .catch((err) => this.logger.error('S3 upload failed', err));
-      // } else {
-      //   if (filePath) {
-      //     const s3Stream = createReadStream(filePath);
-      //     this.storageService
-      //       .uploadMultipart(s3Stream, filename)
-      //       .catch((err) => this.logger.error('S3 upload failed', err));
-      //   } else {
-      //     this.logger.warn('No file path available for S3 upload');
-      //   }
-      // }
 
       if (jobId) this.completeProgress(jobId);
       this.logger.log('Processing DONE! Output size:', size);
@@ -167,12 +148,14 @@ export class FfmpegService {
             `Cannot upload file ${filename} to S3: file size must be greater than 0 bytes`,
           );
         }
-        await this.storageService.uploadMultipart(buffer, filename);
-        downloadUrl = await this.storageService.generatePresignedUrl(filename);
+        const { filename: uploadedFilename } =
+          await this.storageService.uploadMultipart(buffer, filename);
+        downloadUrl =
+          await this.storageService.generatePresignedUrl(uploadedFilename);
 
         return {
           buffer,
-          filename,
+          filename: uploadedFilename,
           mimeType,
           length: Buffer.isBuffer(buffer) ? buffer.length : fileLength,
           downloadUrl,
