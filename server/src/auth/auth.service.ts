@@ -15,18 +15,20 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private supabase: SupabaseClient;
+  private readonly supabaseUrl: string;
+  private readonly supabaseKey: string;
 
   constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseKey = this.configService.get<string>('SUPABASE_KEY');
+    this.supabaseUrl = this.configService.get<string>('SUPABASE_URL') || '';
+    this.supabaseKey = this.configService.get<string>('SUPABASE_KEY') || '';
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!this.supabaseUrl || !this.supabaseKey) {
       throw new Error(
         'Supabase URL and Key must be configured. Please set SUPABASE_URL and SUPABASE_KEY environment variables.',
       );
     }
 
-    this.supabase = createClient(supabaseUrl, supabaseKey, {
+    this.supabase = createClient(this.supabaseUrl, this.supabaseKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -62,6 +64,7 @@ export class AuthService {
         user: {
           email: data.user?.email,
           id: data.user?.id,
+          plan: 'free', // Default plan, will be updated when Stripe integration is added
         },
         accessToken: data.session?.access_token,
         refreshToken: data.session?.refresh_token,
@@ -97,6 +100,7 @@ export class AuthService {
         user: {
           email: data.user?.email,
           id: data.user?.id,
+          plan: 'free', // Default plan, will be updated when Stripe integration is added
         },
         accessToken: data.session?.access_token,
         refreshToken: data.session?.refresh_token,
@@ -106,6 +110,40 @@ export class AuthService {
         throw error;
       }
       throw new UnauthorizedException('Login failed');
+    }
+  }
+
+  async getCurrentUser(accessToken: string) {
+    try {
+      // Create a new Supabase client with the access token
+      const supabaseClient = createClient(this.supabaseUrl, this.supabaseKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      });
+
+      const { data, error } = await supabaseClient.auth.getUser();
+
+      if (error || !data.user) {
+        throw new UnauthorizedException('Invalid or expired token');
+      }
+
+      return {
+        email: data.user.email,
+        id: data.user.id,
+        plan: 'free', // Default plan, will be updated when Stripe integration is added
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Failed to get user');
     }
   }
 
@@ -132,13 +170,6 @@ export class AuthService {
     }
 
     try {
-      const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-      const supabaseKey = this.configService.get<string>('SUPABASE_KEY');
-
-      if (!supabaseUrl || !supabaseKey) {
-        throw new BadRequestException('Server configuration error');
-      }
-
       // Use Supabase REST API directly for password reset
       // Recovery tokens need to be used with the REST API endpoint
       this.logger.log('Attempting to reset password using recovery token');
@@ -146,12 +177,12 @@ export class AuthService {
 
       // Call Supabase REST API directly to update password
       // This avoids the "Auth session missing" error by using the token directly
-      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      const response = await fetch(`${this.supabaseUrl}/auth/v1/user`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-          apikey: supabaseKey,
+          apikey: this.supabaseKey,
         },
         body: JSON.stringify({
           password: password,
@@ -197,6 +228,7 @@ export class AuthService {
             ? {
                 email: userInfo.email,
                 id: userInfo.id,
+                plan: 'free', // Default plan, will be updated when Stripe integration is added
               }
             : null,
       };
