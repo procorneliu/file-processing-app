@@ -3,6 +3,8 @@ import Home from './pages/Home';
 import FileEditor from './pages/FileEditor';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import { FileProvider } from './contexts/FileContext';
 import { CardProvider } from './contexts/CardContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -26,6 +28,14 @@ const router = createBrowserRouter([
       {
         path: '/register',
         element: <Register />,
+      },
+      {
+        path: '/forgot-password',
+        element: <ForgotPassword />,
+      },
+      {
+        path: '/reset-password',
+        element: <ResetPassword />,
       },
     ],
   },

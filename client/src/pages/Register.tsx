@@ -22,22 +22,13 @@ function Register() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return;
-    }
-
     setLoading(true);
 
     try {
       await register({ email, password, passwordConfirm: confirmPassword });
       navigate('/app');
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Registration failed. Please try again.');
-      }
+    } catch {
+      setError('Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -72,7 +63,6 @@ function Register() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                minLength={6}
                 className="w-full rounded-xl border border-stone-500 bg-transparent px-4 py-3 text-stone-100 transition-all duration-300 outline-none placeholder:text-stone-400 focus:ring focus:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
@@ -84,7 +74,6 @@ function Register() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 disabled={loading}
-                minLength={6}
                 className="w-full rounded-xl border border-stone-500 bg-transparent px-4 py-3 text-stone-100 transition-all duration-300 outline-none placeholder:text-stone-400 focus:ring focus:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>

@@ -20,12 +20,8 @@ function Login() {
     try {
       await login({ email, password });
       navigate('/app');
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Login failed. Please try again.');
-      }
+    } catch {
+      setError('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -72,15 +68,26 @@ function Login() {
                 {loading ? 'Logging in...' : 'Login'}
               </button>
             </div>
-            <div className="pt-2 text-sm">
-              <span className="text-stone-400">Don't have an account? </span>
-              <button
-                type="button"
-                onClick={() => navigate('/register')}
-                className="text-blue-400 underline hover:text-blue-300"
-              >
-                Register
-              </button>
+            <div className="space-y-2 pt-2">
+              <div className="text-sm">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-blue-400 underline hover:text-blue-300"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+              <div className="text-sm">
+                <span className="text-stone-400">Don't have an account? </span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/register')}
+                  className="text-blue-400 underline hover:text-blue-300"
+                >
+                  Register
+                </button>
+              </div>
             </div>
           </form>
         </div>
