@@ -24,6 +24,7 @@ export async function processFile(
   const res = await axios.post(`${API_BASE}`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
     responseType: 'blob',
+    withCredentials: true,
   });
 
   if (res.status === 204) {

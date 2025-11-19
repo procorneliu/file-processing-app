@@ -115,6 +115,12 @@ export class FfmpegService {
         return null;
       }
 
+      // Emit progress update after command completes but before archiving
+      // This prevents the UI from appearing stuck at 99-100% during archiving
+      if (jobId && isFrameExtraction) {
+        this.manager.emitProgress(jobId, 95);
+      }
+
       // For video_image, use .zip extension for the filename
       const outputExtension = type === 'video_image' ? 'zip' : convertTo;
       const filename = buildOutputName(file.originalname, outputExtension);
@@ -123,6 +129,7 @@ export class FfmpegService {
         isFrameExtraction,
         convertTo,
         cleanupTargets,
+        jobId,
       );
 
       if (jobId) this.completeProgress(jobId);
@@ -183,6 +190,7 @@ export class FfmpegService {
     isFrameExtraction: boolean,
     convertTo: string,
     cleanupTargets: string[],
+    jobId?: string,
   ): Promise<{ buffer: Buffer | Readable; length?: number }> {
     if (!isFrameExtraction) {
       const buffer = await fs.readFile(outputTarget);
@@ -191,8 +199,18 @@ export class FfmpegService {
     const zipPath = createTempOutputPath('zip');
     cleanupTargets.push(zipPath);
 
-    // FIXME: takes too long to zip archive
+    // Emit progress update before archiving starts
+    if (jobId) {
+      this.manager.emitProgress(jobId, 96);
+    }
+
+    // Archive frames directory (can take a while for large frame sets)
     await archiveFramesDirectory(outputTarget, zipPath);
+
+    // Emit progress update after archiving completes
+    if (jobId) {
+      this.manager.emitProgress(jobId, 99);
+    }
 
     // Get file size for zip files
     const stats = await fs.stat(zipPath);

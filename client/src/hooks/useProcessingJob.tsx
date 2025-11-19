@@ -70,7 +70,9 @@ export function useProcessingJob(): UseProcessingJobReturn {
     jobIdRef.current = null;
 
     try {
-      await axios.post(`${API_BASE}/cancel/${jobId}`);
+      await axios.post(`${API_BASE}/cancel/${jobId}`, {}, {
+        withCredentials: true,
+      });
     } catch (err) {
       console.log('Failed to cancel job', err);
     } finally {
