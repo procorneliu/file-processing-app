@@ -1,12 +1,15 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   HttpCode,
   HttpStatus,
   Res,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -99,5 +102,18 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  async getCurrentUser(@Req() req: Request) {
+    const accessToken = req.cookies?.access_token;
+
+    if (!accessToken) {
+      throw new UnauthorizedException('No access token provided');
+    }
+
+    const user = await this.authService.getCurrentUser(accessToken);
+    return { user };
   }
 }
