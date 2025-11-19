@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Dashboard from './pages/Dashboard';
 import { FileProvider } from './contexts/FileContext';
 import { CardProvider } from './contexts/CardContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -37,6 +38,10 @@ const router = createBrowserRouter([
       {
         path: '/reset-password',
         element: <ResetPassword />,
+      },
+      {
+        path: '/dashboard',
+        element: <Dashboard />,
       },
     ],
   },

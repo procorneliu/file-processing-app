@@ -20,6 +20,7 @@ export type AuthResponse = {
   user: {
     email: string;
     id: string;
+    plan: 'free' | 'pro';
   };
 };
 
@@ -70,6 +71,7 @@ export type ResetPasswordResponse = {
   user?: {
     email: string;
     id: string;
+    plan: 'free' | 'pro';
   };
 };
 
@@ -96,5 +98,22 @@ export async function resetPassword(
       withCredentials: true,
     },
   );
+  return response.data;
+}
+
+export type UserProfile = {
+  email: string;
+  id: string;
+  plan: 'free' | 'pro';
+};
+
+export type UserProfileResponse = {
+  user: UserProfile;
+};
+
+export async function getCurrentUser(): Promise<UserProfileResponse> {
+  const response = await axios.get<UserProfileResponse>(`${API_BASE}/me`, {
+    withCredentials: true,
+  });
   return response.data;
 }
