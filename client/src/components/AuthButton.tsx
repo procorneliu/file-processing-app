@@ -14,7 +14,12 @@ function AuthButton() {
   if (isAuthenticated && user) {
     return (
       <div className="flex items-center gap-3">
-        <span className="text-sm text-stone-50">{user.email}</span>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="cursor-pointer text-sm text-stone-50 transition-colors hover:text-blue-400 hover:underline"
+        >
+          {user.email}
+        </button>
         <Button action={handleLogout}>Logout</Button>
       </div>
     );
