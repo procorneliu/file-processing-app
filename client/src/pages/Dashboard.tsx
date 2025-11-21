@@ -1,11 +1,21 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AuthButton from '../components/AuthButton';
+import { activateSubscription } from '../api/subscription';
+import ErrorMessage from '../ui/ErrorMessage';
 
 function Dashboard() {
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    user,
+    refreshUser,
+  } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
   useEffect(() => {
     // Wait for auth check to complete
@@ -18,6 +28,42 @@ function Dashboard() {
       return;
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  useEffect(() => {
+    // Handle Stripe redirects
+    const subscriptionStatus = searchParams.get('subscription');
+    if (subscriptionStatus === 'success') {
+      // Remove query parameter to prevent infinite loop
+      setSearchParams({});
+      // Refresh user data to get updated plan
+      refreshUser();
+    } else if (subscriptionStatus === 'cancelled') {
+      setSearchParams({});
+      setUpgradeError('Subscription checkout was cancelled');
+    }
+  }, [searchParams, setSearchParams, refreshUser]);
+
+  const handleUpgrade = async () => {
+    setUpgradeError(null);
+    setUpgradeLoading(true);
+
+    try {
+      const { checkoutUrl } = await activateSubscription();
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else {
+        setUpgradeError('Failed to get checkout URL');
+        setUpgradeLoading(false);
+      }
+    } catch (error) {
+      setUpgradeError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to start subscription. Please try again.',
+      );
+      setUpgradeLoading(false);
+    }
+  };
 
   if (authLoading) {
     return (
@@ -69,13 +115,13 @@ function Dashboard() {
                       Upgrade to Pro for advanced features and monthly
                       subscriptions.
                     </p>
+                    {upgradeError && <ErrorMessage message={upgradeError} />}
                     <button
-                      className="cursor-pointer rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-stone-800 focus:outline-none"
-                      onClick={() => {
-                        // Logic will be added later
-                      }}
+                      className="cursor-pointer rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-stone-800 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={handleUpgrade}
+                      disabled={upgradeLoading}
                     >
-                      ✨ Upgrade to PRO
+                      {upgradeLoading ? 'Loading...' : '✨ Upgrade to PRO'}
                     </button>
                   </div>
                 )}
