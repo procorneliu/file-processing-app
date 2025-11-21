@@ -43,6 +43,25 @@ export class AuthService {
     });
   }
 
+  // Get subscription plan status with error handling
+  private async getSubscriptionPlanSafely(
+    userId: string | null | undefined,
+  ): Promise<'free' | 'pro'> {
+    if (!userId) {
+      return 'free';
+    }
+
+    try {
+      return await this.subscriptionService.getSubscriptionStatus(userId);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get subscription status for user ${userId}, defaulting to free`,
+        error,
+      );
+      return 'free';
+    }
+  }
+
   async register(registerDto: RegisterDto) {
     const { email, password, passwordConfirm } = registerDto;
 
@@ -68,9 +87,7 @@ export class AuthService {
       }
 
       const userId = data.user?.id;
-      const plan = userId
-        ? await this.subscriptionService.getSubscriptionStatus(userId)
-        : 'free';
+      const plan = await this.getSubscriptionPlanSafely(userId);
 
       return {
         user: {
@@ -109,9 +126,7 @@ export class AuthService {
       }
 
       const userId = data.user?.id;
-      const plan = userId
-        ? await this.subscriptionService.getSubscriptionStatus(userId)
-        : 'free';
+      const plan = await this.getSubscriptionPlanSafely(userId);
 
       return {
         user: {
@@ -153,9 +168,7 @@ export class AuthService {
       }
 
       // Check subscription status
-      const plan = await this.subscriptionService.getSubscriptionStatus(
-        data.user.id,
-      );
+      const plan = await this.getSubscriptionPlanSafely(data.user.id);
 
       return {
         email: data.user.email,
@@ -243,9 +256,7 @@ export class AuthService {
       const userInfo = data.user || data;
 
       const userId = userInfo?.id;
-      const plan = userId
-        ? await this.subscriptionService.getSubscriptionStatus(userId)
-        : 'free';
+      const plan = await this.getSubscriptionPlanSafely(userId);
 
       return {
         message: 'Password has been reset successfully',
