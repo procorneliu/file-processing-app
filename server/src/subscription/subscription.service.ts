@@ -124,11 +124,12 @@ export class SubscriptionService {
         },
       );
 
-      // Update status in Supabase
+      // Update status in Supabase to 'canceled' immediately
+      // This ensures users lose pro access right away
       await this.updateSubscriptionStatus(
         userId,
         subscription.stripe_subscription_id,
-        'cancel_at_period_end',
+        'canceled',
       );
 
       return {
@@ -228,9 +229,15 @@ export class SubscriptionService {
   async getSubscriptionStatus(userId: string): Promise<'free' | 'pro'> {
     const subscription = await this.getUserSubscription(userId);
 
+    if (!subscription) {
+      return 'free';
+    }
+
+    // Only return 'pro' if status is active or trialing
+    // Treat canceled or cancel_at_period_end as free
     if (
-      subscription &&
-      (subscription.status === 'active' || subscription.status === 'trialing')
+      subscription.status === 'active' ||
+      subscription.status === 'trialing'
     ) {
       return 'pro';
     }

@@ -38,12 +38,16 @@ export async function activateSubscription(): Promise<ActivateSubscriptionRespon
 }
 
 export async function cancelSubscription(): Promise<CancelSubscriptionResponse> {
-  const response = await axios.post<CancelSubscriptionResponse>(
-    `${API_BASE}/cancel`,
-    {},
-    {
-      withCredentials: true,
-    },
-  );
-  return response.data;
+  try {
+    const response = await axios.post<CancelSubscriptionResponse>(
+      `${API_BASE}/cancel`,
+      {},
+      {
+        withCredentials: true,
+      },
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
 }
