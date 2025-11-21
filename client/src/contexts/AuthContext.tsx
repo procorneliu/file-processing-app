@@ -1,5 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
 import type { ReactNode } from 'react';
 import {
   login as loginApi,
@@ -7,7 +13,7 @@ import {
   logout as logoutApi,
   getCurrentUser,
 } from '../api/auth';
-import type { LoginRequest, RegisterRequest } from '../api/auth';
+import type { LoginRequest, RegisterRequest, UserProfile } from '../api/auth';
 
 type User = {
   email: string;
@@ -22,6 +28,7 @@ type AuthContextType = {
   login: (data: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -31,44 +38,48 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: async () => {},
+  refreshUser: async () => {},
 });
 
 function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Check auth status on mount using /me endpoint
-  // Server returns { user: null } instead of throwing error if not authenticated
-  useEffect(() => {
-    const checkAuth = async () => {
-      const response = await getCurrentUser();
 
-      if (response?.user) {
-        setUser({
-          email: response.user.email,
-          id: response.user.id,
-          plan: response.user.plan,
-        });
-      } else {
-        setUser(null);
-      }
-
-      setIsLoading(false);
-    };
-
-    checkAuth();
-  }, []);
-
-  const login = async (data: LoginRequest) => {
-    try {
-      const response = await loginApi(data);
-
-      // Cookies are automatically set by server for API authentication
-      // We just store user info in state
+  const updateUserFromResponse = (response: { user: UserProfile } | null) => {
+    if (response?.user) {
       setUser({
         email: response.user.email,
         id: response.user.id,
         plan: response.user.plan,
       });
+    } else {
+      setUser(null);
+    }
+  };
+
+  const refreshUser = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await getCurrentUser();
+      updateUserFromResponse(response);
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Check auth status on mount using /me endpoint
+  // Server returns { user: null } instead of throwing error if not authenticated
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
+
+  const login = async (data: LoginRequest) => {
+    try {
+      const response = await loginApi(data);
+      updateUserFromResponse(response);
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -78,14 +89,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (data: RegisterRequest) => {
     try {
       const response = await registerApi(data);
-
-      // Cookies are automatically set by server for API authentication
-      // We just store user info in state
-      setUser({
-        email: response.user.email,
-        id: response.user.id,
-        plan: response.user.plan,
-      });
+      updateUserFromResponse(response);
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
@@ -115,6 +119,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        refreshUser,
       }}
     >
       {children}
