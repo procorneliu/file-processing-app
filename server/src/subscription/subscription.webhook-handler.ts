@@ -109,14 +109,21 @@ export class SubscriptionWebhookHandler {
         return;
       }
 
+      // If subscription is scheduled to cancel, mark it as canceled immediately
+      // This prevents users from retaining pro access after canceling
+      const status =
+        subscription.cancel_at_period_end && subscription.status === 'active'
+          ? 'canceled'
+          : subscription.status;
+
       await this.updateSubscriptionStatus(
         subscriptionData.user_id,
         subscription.id,
-        subscription.status,
+        status,
       );
 
       this.logger.log(
-        `Subscription updated for user ${subscriptionData.user_id}: ${subscription.status}`,
+        `Subscription updated for user ${subscriptionData.user_id}: ${status}`,
       );
     }
   }

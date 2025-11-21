@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AuthButton from '../components/AuthButton';
-import { activateSubscription } from '../api/subscription';
+import { activateSubscription, cancelSubscription } from '../api/subscription';
 import ErrorMessage from '../ui/ErrorMessage';
 
 function Dashboard() {
@@ -16,6 +16,8 @@ function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   useEffect(() => {
     // Wait for auth check to complete
@@ -62,6 +64,23 @@ function Dashboard() {
           : 'Failed to start subscription. Please try again.',
       );
       setUpgradeLoading(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    setCancelError(null);
+    setCancelLoading(true);
+
+    try {
+      await cancelSubscription();
+      await refreshUser();
+    } catch (error) {
+      setCancelError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to cancel subscription. Please try again.',
+      );
+      setCancelLoading(false);
     }
   };
 
@@ -122,6 +141,22 @@ function Dashboard() {
                       disabled={upgradeLoading}
                     >
                       {upgradeLoading ? 'Loading...' : '✨ Upgrade to PRO'}
+                    </button>
+                  </div>
+                )}
+                {user.plan === 'pro' && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-sm text-stone-400">
+                      You are currently on the Pro plan. You can cancel your
+                      subscription at any time.
+                    </p>
+                    {cancelError && <ErrorMessage message={cancelError} />}
+                    <button
+                      className="cursor-pointer rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-stone-800 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={handleCancel}
+                      disabled={cancelLoading}
+                    >
+                      {cancelLoading ? 'Loading...' : 'Cancel Subscription'}
                     </button>
                   </div>
                 )}
