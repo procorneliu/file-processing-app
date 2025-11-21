@@ -3,6 +3,8 @@ import {
   BadRequestException,
   UnauthorizedException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -10,6 +12,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SubscriptionService } from '../subscription/subscription.service';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +21,11 @@ export class AuthService {
   private readonly supabaseUrl: string;
   private readonly supabaseKey: string;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @Inject(forwardRef(() => SubscriptionService))
+    private subscriptionService: SubscriptionService,
+  ) {
     this.supabaseUrl = this.configService.getOrThrow<string>('SUPABASE_URL');
     this.supabaseKey = this.configService.getOrThrow<string>('SUPABASE_KEY');
 
@@ -60,11 +67,16 @@ export class AuthService {
         throw new BadRequestException(error.message);
       }
 
+      const userId = data.user?.id;
+      const plan = userId
+        ? await this.subscriptionService.getSubscriptionStatus(userId)
+        : 'free';
+
       return {
         user: {
           email: data.user?.email,
-          id: data.user?.id,
-          plan: 'free', // Default plan, will be updated when Stripe integration is added
+          id: userId,
+          plan,
         },
         accessToken: data.session?.access_token,
         refreshToken: data.session?.refresh_token,
@@ -96,11 +108,16 @@ export class AuthService {
         throw new UnauthorizedException(error.message);
       }
 
+      const userId = data.user?.id;
+      const plan = userId
+        ? await this.subscriptionService.getSubscriptionStatus(userId)
+        : 'free';
+
       return {
         user: {
           email: data.user?.email,
-          id: data.user?.id,
-          plan: 'free', // Default plan, will be updated when Stripe integration is added
+          id: userId,
+          plan,
         },
         accessToken: data.session?.access_token,
         refreshToken: data.session?.refresh_token,
@@ -135,10 +152,15 @@ export class AuthService {
         return null;
       }
 
+      // Check subscription status
+      const plan = await this.subscriptionService.getSubscriptionStatus(
+        data.user.id,
+      );
+
       return {
         email: data.user.email,
         id: data.user.id,
-        plan: 'free', // Default plan, will be updated when Stripe integration is added
+        plan,
       };
     } catch {
       // Return null instead of throwing - controller will handle it
@@ -220,14 +242,19 @@ export class AuthService {
       // Get user info to return
       const userInfo = data.user || data;
 
+      const userId = userInfo?.id;
+      const plan = userId
+        ? await this.subscriptionService.getSubscriptionStatus(userId)
+        : 'free';
+
       return {
         message: 'Password has been reset successfully',
         user:
-          userInfo?.email && userInfo?.id
+          userInfo?.email && userId
             ? {
                 email: userInfo.email,
-                id: userInfo.id,
-                plan: 'free', // Default plan, will be updated when Stripe integration is added
+                id: userId,
+                plan,
               }
             : null,
       };
