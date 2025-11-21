@@ -64,15 +64,21 @@ function Dashboard() {
                   </span>
                 </div>
                 {user.plan === 'free' && (
-                  <p className="mt-2 text-sm text-stone-400">
-                    Upgrade to Pro for advanced features and monthly
-                    subscriptions.
-                  </p>
+                  <div className="mt-4 space-y-3">
+                    <p className="text-sm text-stone-400">
+                      Upgrade to Pro for advanced features and monthly
+                      subscriptions.
+                    </p>
+                    <button
+                      className="cursor-pointer rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-stone-800 focus:outline-none"
+                      onClick={() => {
+                        // Logic will be added later
+                      }}
+                    >
+                      ✨ Upgrade to PRO
+                    </button>
+                  </div>
                 )}
-              </div>
-
-              <div className="pt-4">
-                <p className="text-sm text-stone-500">User ID: {user.id}</p>
               </div>
             </div>
           )}
