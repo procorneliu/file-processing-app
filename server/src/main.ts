@@ -4,11 +4,24 @@ import { AllExceptionFilter } from './exceptions/all-exception.filter';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import { json } from 'express';
+import type { Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.set('trust proxy', 'loopback');
+
+  // Raw body for Stripe webhook verification
+  app.use(
+    '/api/subscription/webhook',
+    json({
+      verify: (req: Request, res: Response, buf: Buffer) => {
+        const request = req as Request & { rawBody?: Buffer };
+        request.rawBody = buf;
+      },
+    }),
+  );
 
   app.enableCors({
     origin: process.env.CLIENT_URL, // Remove trailing slash to match actual origin

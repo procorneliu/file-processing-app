@@ -2,24 +2,19 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-type SubscriptionData = {
-  user_id: string;
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
-  status: string | null;
-  updated_at: string | null;
-} | null;
+import type { SubscriptionData } from './subscription.types';
+import { SubscriptionWebhookHandler } from './subscription.webhook-handler';
 
 @Injectable()
 export class SubscriptionService {
   private readonly logger = new Logger(SubscriptionService.name);
-  private stripe: Stripe;
+  public readonly stripe: Stripe;
   private supabase: SupabaseClient;
   private readonly supabaseUrl: string;
   private readonly supabaseKey: string;
   private readonly stripePriceId: string;
   private readonly clientUrl: string;
+  private webhookHandler: SubscriptionWebhookHandler;
 
   constructor(private configService: ConfigService) {
     this.clientUrl = this.configService.getOrThrow<string>('CLIENT_URL');
@@ -42,6 +37,13 @@ export class SubscriptionService {
         persistSession: false,
       },
     });
+
+    this.webhookHandler = new SubscriptionWebhookHandler(
+      this.stripe,
+      this.supabase,
+      this.storeSubscriptionData.bind(this),
+      this.updateSubscriptionStatus.bind(this),
+    );
   }
 
   // Activate user subscription
@@ -234,5 +236,10 @@ export class SubscriptionService {
     }
 
     return 'free';
+  }
+
+  // Handle Stripe webhook events
+  async handleWebhookEvent(event: Stripe.Event): Promise<void> {
+    return this.webhookHandler.handleWebhookEvent(event);
   }
 }
