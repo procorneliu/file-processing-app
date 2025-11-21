@@ -36,23 +36,23 @@ const AuthContext = createContext<AuthContextType>({
 function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Check for existing session on mount
+  // Check auth status on mount using /me endpoint
+  // Server returns { user: null } instead of throwing error if not authenticated
   useEffect(() => {
     const checkAuth = async () => {
-      try {
-        const response = await getCurrentUser();
+      const response = await getCurrentUser();
+
+      if (response?.user) {
         setUser({
           email: response.user.email,
           id: response.user.id,
           plan: response.user.plan,
         });
-      } catch (error) {
-        // User is not authenticated, clear user state
+      } else {
         setUser(null);
-      } finally {
-        setIsLoading(false);
       }
+
+      setIsLoading(false);
     };
 
     checkAuth();
@@ -61,13 +61,14 @@ function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (data: LoginRequest) => {
     try {
       const response = await loginApi(data);
-      const userData = {
+
+      // Cookies are automatically set by server for API authentication
+      // We just store user info in state
+      setUser({
         email: response.user.email,
         id: response.user.id,
         plan: response.user.plan,
-      };
-
-      setUser(userData);
+      });
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -77,13 +78,14 @@ function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (data: RegisterRequest) => {
     try {
       const response = await registerApi(data);
-      const userData = {
+
+      // Cookies are automatically set by server for API authentication
+      // We just store user info in state
+      setUser({
         email: response.user.email,
         id: response.user.id,
         plan: response.user.plan,
-      };
-
-      setUser(userData);
+      });
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
@@ -96,6 +98,8 @@ function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
+      // Server clears cookies via logout endpoint
+      // Just clear user state
       setUser(null);
     }
   };

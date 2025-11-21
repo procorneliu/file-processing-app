@@ -72,11 +72,15 @@ export function useProcessingJob(): UseProcessingJobReturn {
     jobIdRef.current = null;
 
     try {
-      await axios.post(`${API_BASE}/cancel/${jobId}`, {}, {
-        withCredentials: true,
-      });
-    } catch (err) {
-      console.log('Failed to cancel job', err);
+      await axios.post(
+        `${API_BASE}/cancel/${jobId}`,
+        {},
+        {
+          withCredentials: true,
+        },
+      );
+    } catch {
+      // Silently handle cancel errors
     } finally {
       resetState();
       setStatus('cancelled');
@@ -106,8 +110,8 @@ export function useProcessingJob(): UseProcessingJobReturn {
           if (typeof payload.percent === 'number') {
             setProgress(payload.percent);
           }
-        } catch (parseError) {
-          console.log('Failed to parse progress event', parseError);
+        } catch {
+          // Silently handle parse errors
         }
       });
 
@@ -131,8 +135,8 @@ export function useProcessingJob(): UseProcessingJobReturn {
             setError(payload.message ?? 'Processing failed');
             setStatus('error');
           }
-        } catch (parseError) {
-          console.log('Failed to parse error event', parseError);
+        } catch {
+          // Silently handle parse errors
         }
         cleanupEventSource();
         jobIdRef.current = null;

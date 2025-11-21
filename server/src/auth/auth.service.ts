@@ -19,8 +19,8 @@ export class AuthService {
   private readonly supabaseKey: string;
 
   constructor(private configService: ConfigService) {
-    this.supabaseUrl = this.configService.get<string>('SUPABASE_URL') || '';
-    this.supabaseKey = this.configService.get<string>('SUPABASE_KEY') || '';
+    this.supabaseUrl = this.configService.getOrThrow<string>('SUPABASE_URL');
+    this.supabaseKey = this.configService.getOrThrow<string>('SUPABASE_KEY');
 
     if (!this.supabaseUrl || !this.supabaseKey) {
       throw new Error(
@@ -131,7 +131,8 @@ export class AuthService {
       const { data, error } = await supabaseClient.auth.getUser();
 
       if (error || !data.user) {
-        throw new UnauthorizedException('Invalid or expired token');
+        // Return null instead of throwing - controller will handle it
+        return null;
       }
 
       return {
@@ -139,11 +140,9 @@ export class AuthService {
         id: data.user.id,
         plan: 'free', // Default plan, will be updated when Stripe integration is added
       };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      throw new UnauthorizedException('Failed to get user');
+    } catch {
+      // Return null instead of throwing - controller will handle it
+      return null;
     }
   }
 
