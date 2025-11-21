@@ -10,11 +10,8 @@ async function cleanUp(paths: string[]) {
         } else {
           await fs.unlink(filePath);
         }
-      } catch (error) {
-        const err = error as NodeJS.ErrnoException;
-        if (err.code !== 'ENOENT') {
-          console.log('Failed to remove temp file', filePath, error);
-        }
+      } catch {
+        // Silently ignore cleanup errors (file may not exist or already deleted)
       }
     }),
   );

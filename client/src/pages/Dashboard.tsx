@@ -1,17 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getCurrentUser } from '../api/auth';
-import type { UserProfile } from '../api/auth';
 import AuthButton from '../components/AuthButton';
-import ErrorMessage from '../ui/ErrorMessage';
 
 function Dashboard() {
-  const { isAuthenticated, isLoading: authLoading, user: authUser } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const navigate = useNavigate();
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Wait for auth check to complete
@@ -23,38 +17,12 @@ function Dashboard() {
       navigate('/login');
       return;
     }
+  }, [isAuthenticated, authLoading, navigate]);
 
-    // If we have user from auth context, use it; otherwise fetch
-    if (authUser) {
-      setUser({
-        email: authUser.email,
-        id: authUser.id,
-        plan: authUser.plan,
-      });
-      setLoading(false);
-    } else {
-      const fetchUser = async () => {
-        try {
-          setLoading(true);
-          setError(null);
-          const response = await getCurrentUser();
-          setUser(response.user);
-        } catch (err) {
-          setError('Failed to load profile. Please try again.');
-          console.error('Failed to fetch user:', err);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchUser();
-    }
-  }, [isAuthenticated, authLoading, authUser, navigate]);
-
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <main className="relative flex h-screen w-screen items-center justify-center bg-linear-to-br from-gray-900 to-gray-950">
-        <div className="absolute right-4 top-4 z-10">
+        <div className="absolute top-4 right-4 z-10">
           <AuthButton />
         </div>
         <div className="text-stone-50">Loading...</div>
@@ -64,16 +32,12 @@ function Dashboard() {
 
   return (
     <main className="relative flex h-screen w-screen items-start justify-center overflow-scroll bg-linear-to-br from-gray-900 to-gray-950 pb-10">
-      <div className="absolute right-4 top-4 z-10">
+      <div className="absolute top-4 right-4 z-10">
         <AuthButton />
       </div>
       <div className="mt-20 w-full max-w-2xl px-4">
         <div className="rounded-xl border border-stone-700 bg-stone-800/50 p-8 shadow-lg">
-          <h1 className="mb-6 text-3xl font-semibold text-stone-50">
-            Profile
-          </h1>
-
-          {error && <ErrorMessage message={error} />}
+          <h1 className="mb-6 text-3xl font-semibold text-stone-50">Profile</h1>
 
           {user && (
             <div className="space-y-6">
@@ -108,9 +72,7 @@ function Dashboard() {
               </div>
 
               <div className="pt-4">
-                <p className="text-sm text-stone-500">
-                  User ID: {user.id}
-                </p>
+                <p className="text-sm text-stone-500">User ID: {user.id}</p>
               </div>
             </div>
           )}
@@ -121,4 +83,3 @@ function Dashboard() {
 }
 
 export default Dashboard;
-

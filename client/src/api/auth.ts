@@ -17,11 +17,33 @@ export type LoginRequest = {
 };
 
 export type AuthResponse = {
-  user: {
-    email: string;
-    id: string;
-    plan: 'free' | 'pro';
-  };
+  user: UserProfile;
+  accessToken?: string;
+};
+
+export type UserProfile = {
+  email: string;
+  id: string;
+  plan: 'free' | 'pro';
+};
+
+export type ResetPasswordResponse = {
+  message: string;
+  user?: UserProfile;
+};
+
+export type ForgotPasswordRequest = {
+  email: string;
+};
+
+export type ForgotPasswordResponse = {
+  message: string;
+};
+
+export type ResetPasswordRequest = {
+  token: string;
+  password: string;
+  passwordConfirm: string;
 };
 
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
@@ -52,29 +74,6 @@ export async function logout(): Promise<void> {
   );
 }
 
-export type ForgotPasswordRequest = {
-  email: string;
-};
-
-export type ResetPasswordRequest = {
-  token: string;
-  password: string;
-  passwordConfirm: string;
-};
-
-export type ForgotPasswordResponse = {
-  message: string;
-};
-
-export type ResetPasswordResponse = {
-  message: string;
-  user?: {
-    email: string;
-    id: string;
-    plan: 'free' | 'pro';
-  };
-};
-
 export async function forgotPassword(
   data: ForgotPasswordRequest,
 ): Promise<ForgotPasswordResponse> {
@@ -101,19 +100,29 @@ export async function resetPassword(
   return response.data;
 }
 
-export type UserProfile = {
-  email: string;
-  id: string;
-  plan: 'free' | 'pro';
-};
+export async function getCurrentUser(): Promise<AuthResponse | null> {
+  try {
+    const response = await axios.get<{ user: UserProfile | null }>(
+      `${API_BASE}/me`,
+      {
+        withCredentials: true,
+      },
+    );
 
-export type UserProfileResponse = {
-  user: UserProfile;
-};
+    // Server returns { user: null } if not authenticated (no error thrown)
+    if (!response.data.user) {
+      return null;
+    }
 
-export async function getCurrentUser(): Promise<UserProfileResponse> {
-  const response = await axios.get<UserProfileResponse>(`${API_BASE}/me`, {
-    withCredentials: true,
-  });
-  return response.data;
+    return { user: response.data.user };
+  } catch (error) {
+    // Only log unexpected server errors (5xx)
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      if (status && status >= 500) {
+        console.error('Server error checking auth:', status);
+      }
+    }
+    return null;
+  }
 }
