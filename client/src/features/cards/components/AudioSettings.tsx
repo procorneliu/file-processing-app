@@ -10,6 +10,7 @@ import { useFile } from '../../../contexts/FileContext';
 import { getFileExtension } from '../../../utils/getFileExtension';
 import getFormats from '../../../data/getFormats';
 import { getAudioBitrateOptions } from '../../../data/audioBitrates';
+import { useSubscription } from '../../../hooks/useSubscription';
 
 type BitrateProp = {
   value: string;
@@ -22,6 +23,7 @@ type AudioSettingsProps = {
 
 function AudioSettings({ options, onChange }: AudioSettingsProps) {
   const { file, convertTo, setProcessedFile } = useFile();
+  const { isPro } = useSubscription();
   const audioFormats = useMemo(() => getFormats('audio'), []);
   const sourceExtension = useMemo(
     () => getFileExtension(file?.name)?.toLowerCase() ?? null,
@@ -55,6 +57,7 @@ function AudioSettings({ options, onChange }: AudioSettingsProps) {
   }, [audioBitrates, onChange, options.bitrate]);
 
   function handleChange(e: ChangeEvent<HTMLSelectElement>) {
+    if (!isPro) return;
     const nextBitrate = e.target.value;
     onChange((prev) => ({ ...prev, bitrate: nextBitrate }));
     setProcessedFile(null);
@@ -70,7 +73,8 @@ function AudioSettings({ options, onChange }: AudioSettingsProps) {
         id="format"
         value={options.bitrate}
         onChange={handleChange}
-        className="ml-auto rounded-md border"
+        disabled={!isPro}
+        className="ml-auto rounded-md border disabled:cursor-not-allowed disabled:opacity-50"
       >
         {audioBitrates.map((bitrate) => (
           <AudioListItem value={bitrate} key={bitrate} />

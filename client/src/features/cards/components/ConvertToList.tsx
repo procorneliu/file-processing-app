@@ -1,5 +1,6 @@
 import { useFile } from '../../../contexts/FileContext';
 import FormatsList from './FormatsList';
+import { useSubscription } from '../../../hooks/useSubscription';
 
 export type FormatOption = { value: string; label: string };
 
@@ -10,8 +11,10 @@ type ConvertToProps = {
 
 function ConvertToList({ fileExtension, processType }: ConvertToProps) {
   const { convertTo, setConvertTo, setProcessedFile } = useFile();
+  const { isPro } = useSubscription();
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    if (!isPro) return;
     setProcessedFile(null);
     setConvertTo(e.target.value);
   }
@@ -27,7 +30,8 @@ function ConvertToList({ fileExtension, processType }: ConvertToProps) {
         id="format"
         value={convertTo}
         onChange={handleChange}
-        className="rounded-md border"
+        disabled={!isPro}
+        className="rounded-md border disabled:cursor-not-allowed disabled:opacity-50"
       >
         {processType === 'video_video' && <FormatsList format="video" />}
         {processType === 'video_audio' && <FormatsList format="audio" />}

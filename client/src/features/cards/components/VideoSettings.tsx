@@ -1,6 +1,7 @@
 import { type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { useFile } from '../../../contexts/FileContext';
 import type { ProcessingOptions } from '../../../hooks/useProcessingJob';
+import { useSubscription } from '../../../hooks/useSubscription';
 
 type ResolutionItem = {
   resolution: string;
@@ -13,6 +14,7 @@ type VideoSettings = {
 };
 
 type FpsSettings = Omit<VideoSettings, 'isVideoImage'>;
+type ResolutionSettings = VideoSettings;
 
 const VIDEO_RESOLUTIONS = [
   '256x144',
@@ -36,13 +38,15 @@ function VideoSettings({ options, onChange, isVideoImage }: VideoSettings) {
   );
 }
 
-function Resolution({ options, onChange, isVideoImage }: VideoSettings) {
+function Resolution({ options, onChange, isVideoImage }: ResolutionSettings) {
   const { setProcessedFile } = useFile();
+  const { isPro } = useSubscription();
   const resolutions = !isVideoImage
     ? VIDEO_RESOLUTIONS
     : VIDEO_RESOLUTIONS.slice(0, VIDEO_RESOLUTIONS.length - 1);
 
   function handleChange(e: ChangeEvent<HTMLSelectElement>) {
+    if (!isPro) return;
     const nextResolution = e.target.value;
     onChange((prev) => ({ ...prev, resolution: nextResolution }));
     setProcessedFile(null);
@@ -54,9 +58,10 @@ function Resolution({ options, onChange, isVideoImage }: VideoSettings) {
       <select
         name="video-settings"
         id="video-settings"
-        className="ml-auto rounded-md border"
+        className="ml-auto rounded-md border disabled:cursor-not-allowed disabled:opacity-50"
         value={options.resolution}
         onChange={handleChange}
+        disabled={!isPro}
       >
         {resolutions.map((resolution) => (
           <ResolutionItem resolution={resolution} key={resolution} />
@@ -72,8 +77,10 @@ function ResolutionItem({ resolution }: ResolutionItem) {
 
 function FpsSetting({ options, onChange }: FpsSettings) {
   const { setProcessedFile } = useFile();
+  const { isPro } = useSubscription();
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    if (!isPro) return;
     const nextFps = e.target.value;
     onChange((prev) => ({ ...prev, fps: nextFps }));
     setProcessedFile(null);
@@ -93,6 +100,8 @@ function FpsSetting({ options, onChange }: FpsSettings) {
         onChange={handleChange}
         min={1}
         max={30}
+        disabled={!isPro}
+        className="disabled:cursor-not-allowed disabled:opacity-50"
       />
     </div>
   );
