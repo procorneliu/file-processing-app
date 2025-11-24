@@ -21,8 +21,8 @@ function Dashboard() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
-  const maxFileSize = isPro ? '10GB' : '1GB';
-  const maxVideoLength = isPro ? '60 minutes' : '5 minutes';
+  const maxFileSize = isPro ? '5GB' : '500MB';
+  const maxVideoLength = isPro ? '30 minutes' : '3 minutes';
 
   useEffect(() => {
     // Wait for auth check to complete
@@ -188,11 +188,19 @@ function Dashboard() {
                       {maxVideoLength}
                     </span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-stone-400">
+                      Processing limit per hour:
+                    </span>
+                    <span className="text-sm font-semibold text-stone-50">
+                      {isPro ? '20 videos' : '5 videos'}
+                    </span>
+                  </div>
                 </div>
                 {!isPro && (
                   <p className="mt-2 text-xs text-stone-500">
-                    Upgrade to Pro to increase limits to 10GB file size and 60
-                    minutes video length.
+                    Upgrade to Pro to increase limits to 5GB file size, 30
+                    minutes video length, and 20 videos per hour.
                   </p>
                 )}
               </div>

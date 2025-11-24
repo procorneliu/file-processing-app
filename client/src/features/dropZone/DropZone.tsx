@@ -57,13 +57,13 @@ function DropZone() {
 
       // Check file size based on subscription
       const maxFileSizeBytes = isPro
-        ? 10 * 1024 * 1024 * 1024 // 10GB
-        : 1 * 1024 * 1024 * 1024; // 1GB
+        ? 5 * 1024 * 1024 * 1024 // 5GB
+        : 500 * 1024 * 1024; // 500MB
 
       if (nextFile.size > maxFileSizeBytes) {
-        const maxSizeGB = isPro ? '10GB' : '1GB';
+        const maxSize = isPro ? '5GB' : '500MB';
         return setError(
-          `File size is too big. Maximum file size for ${isPro ? 'Pro' : 'Free'} plan is ${maxSizeGB}.`,
+          `File size is too big. Maximum file size for ${isPro ? 'Pro' : 'Free'} plan is ${maxSize}.`,
         );
       }
 
@@ -86,7 +86,7 @@ function DropZone() {
       if (fileFormat && videoFormats.includes(fileFormat)) {
         try {
           const duration = await getVideoDuration(nextFile);
-          const maxDurationSeconds = isPro ? 60 * 60 : 5 * 60; // 60 min pro, 5 min free
+          const maxDurationSeconds = isPro ? 30 * 60 : 3 * 60; // 30 min pro, 3 min free
           const maxDurationMinutes = Math.floor(maxDurationSeconds / 60);
 
           if (duration > maxDurationSeconds) {
