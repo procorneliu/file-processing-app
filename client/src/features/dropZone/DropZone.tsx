@@ -40,7 +40,9 @@ function DropZone() {
         return setError('File size is too big. Limit is 2GB!');
       }
 
-      const fileFormat = nextFile && getFileExtension(nextFile.name);
+      const fileFormat = (
+        nextFile && getFileExtension(nextFile.name)
+      )?.toLowerCase();
       // check if uploaded file format is supported
       const isExtensionAllowed = fileFormat
         ? allFormats.includes(fileFormat)
