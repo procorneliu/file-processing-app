@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AuthButton from '../components/AuthButton';
 import { activateSubscription, cancelSubscription } from '../api/subscription';
 import ErrorMessage from '../ui/ErrorMessage';
+import { useSubscription } from '../hooks/useSubscription';
 
 function Dashboard() {
   const {
@@ -12,12 +13,16 @@ function Dashboard() {
     user,
     refreshUser,
   } = useAuth();
+  const { isPro } = useSubscription();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const maxFileSize = isPro ? '10GB' : '1GB';
+  const maxVideoLength = isPro ? '60 minutes' : '5 minutes';
 
   useEffect(() => {
     // Wait for auth check to complete
@@ -159,6 +164,36 @@ function Dashboard() {
                       {cancelLoading ? 'Loading...' : 'Cancel Subscription'}
                     </button>
                   </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-stone-400">
+                  Plan Limits
+                </label>
+                <div className="mt-3 space-y-2 rounded-lg border border-stone-700 bg-stone-800/30 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-stone-400">
+                      Maximum file size:
+                    </span>
+                    <span className="text-sm font-semibold text-stone-50">
+                      {maxFileSize}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-stone-400">
+                      Maximum video length:
+                    </span>
+                    <span className="text-sm font-semibold text-stone-50">
+                      {maxVideoLength}
+                    </span>
+                  </div>
+                </div>
+                {!isPro && (
+                  <p className="mt-2 text-xs text-stone-500">
+                    Upgrade to Pro to increase limits to 10GB file size and 60
+                    minutes video length.
+                  </p>
                 )}
               </div>
             </div>

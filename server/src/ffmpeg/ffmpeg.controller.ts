@@ -19,10 +19,17 @@ import { diskStorage } from 'multer';
 import path from 'path';
 import { Observable } from 'rxjs';
 import { FfmpegService } from './ffmpeg.service';
+import { AuthService } from '../auth/auth.service';
+import { SubscriptionService } from '../subscription/subscription.service';
+import processors from './fileProcessors/processors';
 
 @Controller('process')
 export class FfmpegController {
-  constructor(private ffmpegService: FfmpegService) {}
+  constructor(
+    private ffmpegService: FfmpegService,
+    private authService: AuthService,
+    private subscriptionService: SubscriptionService,
+  ) {}
 
   @Post()
   @UseInterceptors(
@@ -42,7 +49,7 @@ export class FfmpegController {
         },
       }),
       limits: {
-        fileSize: 2 * 1024 * 1024 * 1024, // 2GB limit
+        fileSize: 10 * 1024 * 1024 * 1024, // 10GB limit (for Pro users)
       },
     }),
   )
@@ -53,6 +60,58 @@ export class FfmpegController {
     if (!file) throw new BadRequestException('File upload is required');
     const { type, convertTo, jobId, generateDownloadLink, options } = req.body;
     if (!jobId) throw new BadRequestException('JobId is required');
+
+    // Get user subscription status
+    const accessToken = req.cookies?.access_token;
+    let isPro = false;
+    if (accessToken) {
+      const user = await this.authService.getCurrentUser(accessToken);
+      if (user) {
+        const subscriptionStatus =
+          await this.subscriptionService.getSubscriptionStatus(user.id);
+        isPro = subscriptionStatus === 'pro';
+      }
+    }
+
+    // Validate file size
+    const maxFileSizeBytes = isPro
+      ? 10 * 1024 * 1024 * 1024 // 10GB
+      : 1 * 1024 * 1024 * 1024; // 1GB
+
+    if (file.size > maxFileSizeBytes) {
+      const maxSizeGB = isPro ? '10GB' : '1GB';
+      throw new BadRequestException(
+        `File size exceeds the limit. Maximum file size for ${isPro ? 'Pro' : 'Free'} plan is ${maxSizeGB}.`,
+      );
+    }
+
+    // Validate video duration for video files
+    // Note: File is saved by multer to file.path when using diskStorage
+    const videoFormats = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'];
+    const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+    if (fileExtension && videoFormats.includes(fileExtension) && file.path) {
+      try {
+        const duration = await processors.getFileDurationInSeconds(file.path);
+        if (duration !== null) {
+          const maxDurationSeconds = isPro ? 60 * 60 : 5 * 60; // 60 min pro, 5 min free
+          const maxDurationMinutes = isPro ? 60 : 5;
+
+          if (duration > maxDurationSeconds) {
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.floor(duration % 60);
+            throw new BadRequestException(
+              `Video length exceeds the limit. Maximum video length for ${isPro ? 'Pro' : 'Free'} plan is ${maxDurationMinutes} minutes. Your video is ${minutes}m ${seconds}s.`,
+            );
+          }
+        }
+      } catch (error) {
+        // If error is BadRequestException (our validation error), rethrow it
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        // Otherwise, continue processing (duration check failed but not critical)
+      }
+    }
 
     const generateLink = generateDownloadLink === 'true';
 

@@ -8,6 +8,7 @@ import { useFile } from '../../contexts/FileContext';
 import { useCard } from '../../contexts/CardContext';
 import getFormats from '../../data/getFormats';
 import { getFileExtension } from '../../utils/getFileExtension';
+import { useSubscription } from '../../hooks/useSubscription';
 
 type DragAndDropProps = {
   getRootProps: <T extends DropzoneRootProps>(props?: T) => T;
@@ -24,7 +25,27 @@ type ChooseFileProps = { file: File | null } & Omit<
 function DropZone() {
   const { setActiveCard } = useCard();
   const { file, setFile, error, setError } = useFile();
+  const { isPro } = useSubscription();
   const allFormats = getFormats('all');
+
+  const getVideoDuration = useCallback((file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        resolve(video.duration);
+      };
+
+      video.onerror = () => {
+        window.URL.revokeObjectURL(video.src);
+        reject(new Error('Failed to load video metadata'));
+      };
+
+      video.src = URL.createObjectURL(file);
+    });
+  }, []);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -34,10 +55,16 @@ function DropZone() {
           'Something went wrong with file uploading. Please try another one!',
         );
 
-      // limit upload file size.
-      const limitSize = 2 * 1024 * 1024 * 1024; // 2GB
-      if (nextFile.size > limitSize) {
-        return setError('File size is too big. Limit is 2GB!');
+      // Check file size based on subscription
+      const maxFileSizeBytes = isPro
+        ? 10 * 1024 * 1024 * 1024 // 10GB
+        : 1 * 1024 * 1024 * 1024; // 1GB
+
+      if (nextFile.size > maxFileSizeBytes) {
+        const maxSizeGB = isPro ? '10GB' : '1GB';
+        return setError(
+          `File size is too big. Maximum file size for ${isPro ? 'Pro' : 'Free'} plan is ${maxSizeGB}.`,
+        );
       }
 
       const fileFormat = (
@@ -53,10 +80,31 @@ function DropZone() {
         setFile(null);
         return;
       }
+
+      // Check video duration for video files
+      const videoFormats = getFormats('video');
+      if (fileFormat && videoFormats.includes(fileFormat)) {
+        try {
+          const duration = await getVideoDuration(nextFile);
+          const maxDurationSeconds = isPro ? 60 * 60 : 5 * 60; // 60 min pro, 5 min free
+          const maxDurationMinutes = Math.floor(maxDurationSeconds / 60);
+
+          if (duration > maxDurationSeconds) {
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.floor(duration % 60);
+            return setError(
+              `Video length is too long. Maximum video length for ${isPro ? 'Pro' : 'Free'} plan is ${maxDurationMinutes} minutes. Your video is ${minutes}m ${seconds}s.`,
+            );
+          }
+        } catch {
+          // If we can't get duration, continue (server will validate)
+        }
+      }
+
       setFile(nextFile);
       setError(null);
     },
-    [setError, allFormats, setFile],
+    [setError, allFormats, setFile, isPro, getVideoDuration],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
