@@ -1,6 +1,7 @@
 import { useFile } from '../../../contexts/FileContext';
 import FormatsList from './FormatsList';
 import { useSubscription } from '../../../hooks/useSubscription';
+import Tooltip from '../../../ui/Tooltip';
 
 export type FormatOption = { value: string; label: string };
 
@@ -25,19 +26,22 @@ function ConvertToList({ fileExtension, processType }: ConvertToProps) {
       <p>From</p>
       <span className="text-blue-500">{fileExtension}</span>
       <label htmlFor="format ">To</label>
-      <select
-        name="to"
-        id="format"
-        value={convertTo}
-        onChange={handleChange}
-        disabled={!isPro}
-        className="rounded-md border disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {processType === 'video_video' && <FormatsList format="video" />}
-        {processType === 'video_audio' && <FormatsList format="audio" />}
-        {processType === 'audio_audio' && <FormatsList format="audio" />}
-        {processType === 'video_image' && <FormatsList format="image" />}
-      </select>
+      <div className="group relative inline-block">
+        <select
+          name="to"
+          id="format"
+          value={convertTo}
+          onChange={handleChange}
+          disabled={!isPro}
+          className="rounded-md border disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {processType === 'video_video' && <FormatsList format="video" />}
+          {processType === 'video_audio' && <FormatsList format="audio" />}
+          {processType === 'audio_audio' && <FormatsList format="audio" />}
+          {processType === 'video_image' && <FormatsList format="image" />}
+        </select>
+        <Tooltip disabled={!isPro} />
+      </div>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { getFileExtension } from '../../../utils/getFileExtension';
 import getFormats from '../../../data/getFormats';
 import { getAudioBitrateOptions } from '../../../data/audioBitrates';
 import { useSubscription } from '../../../hooks/useSubscription';
+import Tooltip from '../../../ui/Tooltip';
 
 type BitrateProp = {
   value: string;
@@ -66,20 +67,23 @@ function AudioSettings({ options, onChange }: AudioSettingsProps) {
   if (!audioBitrates.length) return null;
 
   return (
-    <div className="flex justify-center space-x-2 pb-2">
+    <div className="flex justify-between pb-2">
       <p>Audio bitrate:</p>
-      <select
-        name="to"
-        id="format"
-        value={options.bitrate}
-        onChange={handleChange}
-        disabled={!isPro}
-        className="ml-auto rounded-md border disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {audioBitrates.map((bitrate) => (
-          <AudioListItem value={bitrate} key={bitrate} />
-        ))}
-      </select>
+      <div className="group relative inline-block">
+        <select
+          name="to"
+          id="format"
+          value={options.bitrate}
+          onChange={handleChange}
+          disabled={!isPro}
+          className="rounded-md border disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {audioBitrates.map((bitrate) => (
+            <AudioListItem value={bitrate} key={bitrate} />
+          ))}
+        </select>
+        <Tooltip disabled={!isPro} />
+      </div>
     </div>
   );
 }

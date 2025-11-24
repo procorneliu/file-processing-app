@@ -2,6 +2,7 @@ import { type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { useFile } from '../../../contexts/FileContext';
 import type { ProcessingOptions } from '../../../hooks/useProcessingJob';
 import { useSubscription } from '../../../hooks/useSubscription';
+import Tooltip from '../../../ui/Tooltip';
 
 type ResolutionItem = {
   resolution: string;
@@ -55,18 +56,21 @@ function Resolution({ options, onChange, isVideoImage }: ResolutionSettings) {
   return (
     <div className="flex justify-between">
       <p className="flex items-center gap-1">Output resolution:</p>
-      <select
-        name="video-settings"
-        id="video-settings"
-        className="ml-auto rounded-md border disabled:cursor-not-allowed disabled:opacity-50"
-        value={options.resolution}
-        onChange={handleChange}
-        disabled={!isPro}
-      >
-        {resolutions.map((resolution) => (
-          <ResolutionItem resolution={resolution} key={resolution} />
-        ))}
-      </select>
+      <div className="group relative inline-block">
+        <select
+          name="video-settings"
+          id="video-settings"
+          className="ml-auto rounded-md border disabled:cursor-not-allowed disabled:opacity-50"
+          value={options.resolution}
+          onChange={handleChange}
+          disabled={!isPro}
+        >
+          {resolutions.map((resolution) => (
+            <ResolutionItem resolution={resolution} key={resolution} />
+          ))}
+        </select>
+        <Tooltip disabled={!isPro} />
+      </div>
     </div>
   );
 }
@@ -92,17 +96,20 @@ function FpsSetting({ options, onChange }: FpsSettings) {
         Fps: <span>{options.fps ?? 30}</span>
       </p>
 
-      <input
-        type="range"
-        name="fps"
-        id="fps"
-        value={options.fps ? Number(options.fps) : 30}
-        onChange={handleChange}
-        min={1}
-        max={30}
-        disabled={!isPro}
-        className="disabled:cursor-not-allowed disabled:opacity-50"
-      />
+      <div className="group relative inline-block">
+        <input
+          type="range"
+          name="fps"
+          id="fps"
+          value={options.fps ? Number(options.fps) : 30}
+          onChange={handleChange}
+          min={1}
+          max={30}
+          disabled={!isPro}
+          className="disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        <Tooltip disabled={!isPro} />
+      </div>
     </div>
   );
 }
