@@ -118,6 +118,13 @@ export class FfmpegController {
 
     const generateLink = generateDownloadLink === 'true';
 
+    // Validate that download link generation requires Pro plan
+    if (generateLink && !isPro) {
+      throw new BadRequestException(
+        'Download link generation is a Pro feature. Please upgrade to Pro to use this feature.',
+      );
+    }
+
     const result = await this.ffmpegService.handle(
       file,
       type,

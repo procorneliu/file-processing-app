@@ -1,9 +1,12 @@
 import ButtonLink from '../ui/ButtonLink';
 import AuthButton from '../components/AuthButton';
 import { useProcessingMode } from '../contexts/ProcessingModeContext';
+import { useSubscription } from '../hooks/useSubscription';
+import Tooltip from '../ui/Tooltip';
 
 function Home() {
   const { setGenerateDownloadLink } = useProcessingMode();
+  const { isPro } = useSubscription();
 
   return (
     <main className="relative h-screen w-screen bg-linear-to-br from-gray-900 to-gray-950">
@@ -20,9 +23,15 @@ function Home() {
           <ButtonLink onClick={() => setGenerateDownloadLink(false)}>
             Get Processed File
           </ButtonLink>
-          <ButtonLink onClick={() => setGenerateDownloadLink(true)}>
-            Get Download Link
-          </ButtonLink>
+          <div className="group relative flex">
+            <ButtonLink
+              onClick={() => setGenerateDownloadLink(true)}
+              disabled={!isPro}
+            >
+              Get Download Link
+            </ButtonLink>
+            <Tooltip disabled={!isPro} />
+          </div>
         </div>
       </div>
     </main>
