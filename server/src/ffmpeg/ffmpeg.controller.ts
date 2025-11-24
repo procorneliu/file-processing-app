@@ -10,6 +10,7 @@ import {
   Sse,
   StreamableFile,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -21,6 +22,7 @@ import { Observable } from 'rxjs';
 import { FfmpegService } from './ffmpeg.service';
 import { AuthService } from '../auth/auth.service';
 import { SubscriptionService } from '../subscription/subscription.service';
+import { SubscriptionThrottlerGuard } from './guards/subscription-throttler.guard';
 import processors from './fileProcessors/processors';
 
 @Controller('process')
@@ -32,6 +34,7 @@ export class FfmpegController {
   ) {}
 
   @Post()
+  @UseGuards(SubscriptionThrottlerGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
