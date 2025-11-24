@@ -10,4 +10,3 @@ export class ResetPasswordDto {
   @IsString()
   passwordConfirm: string;
 }
-

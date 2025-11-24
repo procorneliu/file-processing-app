@@ -23,7 +23,7 @@ export async function writeTempInput(file: Express.Multer.File) {
   const extension =
     path.extname(file.originalname) || extensionFromMime(file.mimetype);
   const tempPath = path.join(tmpdir(), `${randomUUID()}${extension || '.tmp'}`);
-  
+
   // If file was saved to disk (diskStorage), use file.path
   // Otherwise, use file.buffer (memoryStorage)
   if (file.path) {
@@ -33,7 +33,7 @@ export async function writeTempInput(file: Express.Multer.File) {
   } else {
     throw new Error('File has neither path nor buffer');
   }
-  
+
   return tempPath;
 }
 

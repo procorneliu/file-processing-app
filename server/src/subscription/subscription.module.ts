@@ -10,4 +10,3 @@ import { AuthModule } from '../auth/auth.module';
   exports: [SubscriptionService],
 })
 export class SubscriptionModule {}
-

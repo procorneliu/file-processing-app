@@ -19,10 +19,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
     ]),
   ],
   controllers: [FfmpegController],
-  providers: [
-    FfmpegService,
-    StorageService,
-    SubscriptionThrottlerGuard,
-  ],
+  providers: [FfmpegService, StorageService, SubscriptionThrottlerGuard],
 })
 export class FfmpegModule {}
