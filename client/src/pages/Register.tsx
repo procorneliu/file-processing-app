@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AuthButton from '../components/AuthButton';
 import { useAuth } from '../contexts/AuthContext';
 import ErrorMessage from '../ui/ErrorMessage';
+import BackButton from '../ui/BackButton';
 
 function Register() {
   const [email, setEmail] = useState('');
@@ -36,6 +37,7 @@ function Register() {
 
   return (
     <main className="relative flex h-screen w-screen items-center justify-center bg-linear-to-br from-gray-900 to-gray-950">
+      <BackButton />
       <div className="absolute top-4 right-4 z-10">
         <AuthButton />
       </div>
