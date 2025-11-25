@@ -48,7 +48,12 @@ export class FfmpegController {
           }
         },
         filename: function (req, file, cb) {
-          cb(null, file.originalname);
+          const sanitizedName = path.basename(file.originalname); // Removes any path components
+          const ext = path.extname(sanitizedName); // Get extension
+
+          // UUID + extension only (ignore original filename)
+          const safeFilename = `${randomUUID()}${ext}`;
+          cb(null, safeFilename);
         },
       }),
       limits: {
@@ -63,6 +68,22 @@ export class FfmpegController {
     if (!file) throw new BadRequestException('File upload is required');
     const { type, convertTo, jobId, generateDownloadLink, options } = req.body;
     if (!jobId) throw new BadRequestException('JobId is required');
+
+    // Validate file extension
+    const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+    if (!fileExtension) {
+      throw new BadRequestException('File must have an extension');
+    }
+
+    // Validate MIME type mathches extension
+    const expectedMimeTypes = allowedMimeTypes[fileExtension];
+    if (expectedMimeTypes && file.mimetype) {
+      if (!expectedMimeTypes.includes(file.mimetype)) {
+        throw new BadRequestException(
+          `File MIME type (${file.mimetype}) does not match file extension (.${fileExtension})`,
+        );
+      }
+    }
 
     // Get user subscription status
     const accessToken = req.cookies?.access_token;

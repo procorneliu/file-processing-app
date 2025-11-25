@@ -68,3 +68,57 @@ export const AUDIO_CODEC_MAP: Record<string, CodecProfile> = {
   dts: { codec: 'dca', supportsBitrate: true },
   spx: { codec: 'libspeex', supportsBitrate: true },
 };
+
+// Validate MIME type matches extension
+export const allowedMimeTypes: Record<string, string[]> = {
+  // Video formats
+  mp4: ['video/mp4', 'video/x-m4v', 'application/mp4'],
+  mkv: ['video/x-matroska', 'video/mkv'],
+  mov: ['video/quicktime', 'video/x-quicktime'],
+  avi: ['video/x-msvideo', 'video/avi', 'video/msvideo'],
+  flv: ['video/x-flv', 'video/flv'],
+  webm: ['video/webm'],
+  ts: ['video/mp2t', 'video/MP2T'],
+  m2ts: ['video/mp2t', 'video/MP2T'],
+  '3gp': ['video/3gpp', 'video/3gp'],
+  ogv: ['video/ogg', 'application/ogg'],
+  gif: ['image/gif'],
+  mxf: ['application/mxf'],
+  vob: ['video/dvd', 'video/x-ms-vob'],
+  mpg: ['video/mpeg', 'video/mpg'],
+  wmv: ['video/x-ms-wmv', 'video/wmv'],
+  f4v: ['video/x-f4v', 'video/f4v'],
+  yuv: ['video/yuv'],
+  mjpe: ['video/x-motion-jpeg'],
+  nut: ['video/x-nut'],
+
+  // Audio formats
+  mp3: ['audio/mpeg', 'audio/mp3', 'audio/mpeg3'],
+  wav: ['audio/wav', 'audio/wave', 'audio/x-wav'],
+  aac: ['audio/aac', 'audio/x-aac'],
+  flac: ['audio/flac', 'audio/x-flac'],
+  ogg: ['audio/ogg', 'application/ogg'],
+  m4a: ['audio/mp4', 'audio/x-m4a', 'audio/m4a'],
+  opus: ['audio/opus', 'audio/ogg'],
+  alac: ['audio/alac', 'audio/mp4'],
+  wma: ['audio/x-ms-wma', 'audio/wma'],
+  amr: ['audio/amr', 'audio/3gpp'],
+  aiff: ['audio/aiff', 'audio/x-aiff'],
+  au: ['audio/basic', 'audio/au'],
+  ac3: ['audio/ac3'],
+  dts: ['audio/dts', 'audio/vnd.dts'],
+  mp2: ['audio/mpeg', 'audio/mp2'],
+  spx: ['audio/ogg', 'audio/speex'],
+
+  // Image formats
+  png: ['image/png'],
+  jpg: ['image/jpeg'],
+  jpeg: ['image/jpeg'],
+  bmp: ['image/bmp', 'image/x-bmp'],
+  tiff: ['image/tiff', 'image/tif'],
+  webp: ['image/webp'],
+  avif: ['image/avif'],
+  jp2: ['image/jp2', 'image/jpeg2000'],
+  exr: ['image/x-exr', 'image/exr'],
+  tga: ['image/x-tga', 'image/tga'],
+};

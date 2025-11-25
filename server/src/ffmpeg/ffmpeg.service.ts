@@ -73,6 +73,11 @@ export class FfmpegService {
 
     if (jobId) this.initProgress(jobId);
 
+    // add multer upload file to cleanup targets
+    if (file.path) {
+      cleanupTargets.push(file.path);
+    }
+
     try {
       const { outputTarget, isFrameExtraction } = await getDynamicOutput(
         type,
@@ -301,9 +306,25 @@ export class FfmpegService {
     file: Express.Multer.File,
     jobId?: string,
   ) {
+    const fileSizeGB = file.size / (1024 * 1024 * 1024);
+    const timeoutMs = Math.max(
+      30 * 60 * 1000,
+      Math.ceil(fileSizeGB * 2.4 * 60 * 1000), // Min 30min, aprox. 2.4min per GB
+    );
+
     return new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        command.kill('SIGKILL');
+        reject(
+          new Error(
+            `FFmpeg operation timed out after ${timeoutMs / 1000} minutes`,
+          ),
+        );
+      }, timeoutMs);
+
       command
         .on('error', (error: Error) => {
+          clearTimeout(timeout);
           if (jobId && this.jobs.get(jobId)?.cancelled) {
             resolve();
             return;
@@ -340,7 +361,10 @@ export class FfmpegService {
             }
           }
         })
-        .on('end', () => resolve())
+        .on('end', () => {
+          clearTimeout(timeout);
+          resolve();
+        })
         .run();
     });
   }
