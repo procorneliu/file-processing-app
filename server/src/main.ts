@@ -10,10 +10,29 @@ import type { Request, Response, NextFunction } from 'express';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.set('trust proxy', 'loopback');
+  const clientUrl = process.env.CLIENT_URL;
+  if (!clientUrl && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'CLIENT_URL environment variable is required in production.',
+    );
+  }
+
+  app.use(json({ limit: '10mb' })); // Global JSON body size limit
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path === '/api/subscription/webhook') {
+      return next();
+    }
+    return json({ limit: '10mb' })(req, res, next); // add size limit
+  });
+
+  app.set(
+    'trust proxy',
+    process.env.TRUST_PROXY === 'true' ? true : 'loopback',
+  );
 
   app.enableCors({
-    origin: process.env.CLIENT_URL, // Remove trailing slash to match actual origin
+    origin: clientUrl || 'http://localhost:5173', // Remove trailing slash to match actual origin
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
