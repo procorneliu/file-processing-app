@@ -63,7 +63,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
       const response = await getCurrentUser();
       updateUserFromResponse(response);
     } catch (error) {
-      console.error('Failed to refresh user:', error);
+      logError(error, 'Failed to refresh user');
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -81,9 +81,14 @@ function AuthProvider({ children }: { children: ReactNode }) {
       const response = await loginApi(data);
       updateUserFromResponse(response);
     } catch (error) {
-      console.error('Login failed:', error);
+      logError(error, 'Login failed');
       throw error;
     }
+  };
+
+  const logError = (error: unknown, defaultMessage: string) => {
+    const message = error instanceof Error ? error.message : defaultMessage;
+    console.error(message);
   };
 
   const register = async (data: RegisterRequest) => {
@@ -91,7 +96,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
       const response = await registerApi(data);
       updateUserFromResponse(response);
     } catch (error) {
-      console.error('Registration failed:', error);
+      logError(error, 'Registration failed');
       throw error;
     }
   };
@@ -100,7 +105,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await logoutApi();
     } catch (error) {
-      console.error('Logout failed:', error);
+      logError(error, 'Logout failed');
     } finally {
       // Server clears cookies via logout endpoint
       // Just clear user state

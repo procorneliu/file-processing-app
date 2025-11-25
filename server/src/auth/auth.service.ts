@@ -7,7 +7,11 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import {
+  createClient,
+  SupabaseClient,
+  AuthWeakPasswordError,
+} from '@supabase/supabase-js';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -83,6 +87,21 @@ export class AuthService {
             'Invalid Supabase configuration. Please check your SUPABASE_KEY environment variable.',
           );
         }
+
+        // Custom messages for weak passwords on registration
+        if (error instanceof AuthWeakPasswordError) {
+          let errorMessage = '';
+
+          if (error.reasons?.includes('length')) {
+            errorMessage += 'Password should be at least 6 characters. ';
+          }
+          if (error.reasons?.includes('characters')) {
+            errorMessage +=
+              'Password should contain at least one letter and number. ';
+          }
+          throw new BadRequestException(errorMessage);
+        }
+
         throw new BadRequestException(error.message);
       }
 

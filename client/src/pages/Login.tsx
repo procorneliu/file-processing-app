@@ -4,6 +4,7 @@ import AuthButton from '../components/AuthButton';
 import { useAuth } from '../contexts/AuthContext';
 import ErrorMessage from '../ui/ErrorMessage';
 import BackButton from '../ui/BackButton';
+import axios from 'axios';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -33,8 +34,17 @@ function Login() {
     try {
       await login({ email, password });
       navigate('/app');
-    } catch {
-      setError('Login failed. Please try again.');
+    } catch (err) {
+      let errorMessage = 'Login failed. Please try again.';
+
+      if (axios.isAxiosError(err)) {
+        const serverMessage = err.response?.data?.message;
+        if (serverMessage && typeof serverMessage === 'string') {
+          errorMessage = serverMessage;
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

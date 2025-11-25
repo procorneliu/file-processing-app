@@ -4,6 +4,7 @@ import AuthButton from '../components/AuthButton';
 import { useAuth } from '../contexts/AuthContext';
 import ErrorMessage from '../ui/ErrorMessage';
 import BackButton from '../ui/BackButton';
+import axios from 'axios';
 
 function Register() {
   const [email, setEmail] = useState('');
@@ -40,8 +41,16 @@ function Register() {
     try {
       await register({ email, password, passwordConfirm: confirmPassword });
       navigate('/app');
-    } catch {
-      setError('Registration failed. Please try again.');
+    } catch (err) {
+      let errorMessage = 'Registration failed. Please try again.';
+      if (axios.isAxiosError(err)) {
+        const serverMessage = err.response?.data?.message;
+        if (serverMessage && typeof serverMessage === 'string') {
+          errorMessage = serverMessage;
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
