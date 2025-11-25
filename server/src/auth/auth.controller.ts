@@ -8,6 +8,7 @@ import {
   Res,
   Req,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import type { CookieOptions } from 'express';
@@ -16,14 +17,17 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { Throttle } from '@nestjs/throttler';
+import { AuthThrottlerGuard } from './guards/auth-throttler.guard';
 
+@UseGuards(AuthThrottlerGuard)
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   private getCookieOptions(): CookieOptions {
     return {
-      httpOnly: false,
+      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
@@ -54,6 +58,7 @@ export class AuthController {
   }
 
   @Post('register')
+  @Throttle({ default: { limit: 3, ttl: 900 } })
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() registerDto: RegisterDto, @Res() res: Response) {
     const result = await this.authService.register(registerDto);
@@ -73,6 +78,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 900 } })
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto, @Res() res: Response) {
     const result = await this.authService.login(loginDto);
@@ -92,6 +98,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @Throttle({ default: { limit: 5, ttl: 300 } })
   @HttpCode(HttpStatus.OK)
   logout(@Res() res: Response) {
     this.clearAuthCookies(res);
@@ -99,18 +106,21 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { limit: 2, ttl: 3600 } })
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
 
   @Post('reset-password')
+  @Throttle({ default: { limit: 2, ttl: 3600 } })
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
   @Get('me')
+  @Throttle({ default: { limit: 20, ttl: 300 } })
   @HttpCode(HttpStatus.OK)
   async getCurrentUser(@Req() req: Request) {
     try {

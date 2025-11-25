@@ -13,7 +13,7 @@ export class SubscriptionThrottlerGuard extends ThrottlerGuard {
     private authService: AuthService,
     private subscriptionService: SubscriptionService,
   ) {
-    super([{ ttl: 3600, limit: 20 }], storageService, reflector);
+    super([{ ttl: 3600, limit: 100 }], storageService, reflector);
   }
 
   protected async getTracker(req: Request): Promise<string> {
@@ -40,7 +40,7 @@ export class SubscriptionThrottlerGuard extends ThrottlerGuard {
       if (user) {
         const subscriptionStatus =
           await this.subscriptionService.getSubscriptionStatus(user.id);
-        limit = subscriptionStatus === 'pro' ? 20 : 5;
+        limit = subscriptionStatus === 'pro' ? 100 : 50;
       }
     }
 

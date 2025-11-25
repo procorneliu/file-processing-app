@@ -22,8 +22,10 @@ import { Observable } from 'rxjs';
 import { FfmpegService } from './ffmpeg.service';
 import { AuthService } from '../auth/auth.service';
 import { SubscriptionService } from '../subscription/subscription.service';
-import { SubscriptionThrottlerGuard } from './guards/subscription-throttler.guard';
 import processors from './fileProcessors/processors';
+import { randomUUID } from 'crypto';
+import { allowedMimeTypes } from './ffmpeg.constants';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 
 @Controller('process')
 export class FfmpegController {
@@ -34,7 +36,8 @@ export class FfmpegController {
   ) {}
 
   @Post()
-  @UseGuards(SubscriptionThrottlerGuard)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 900 } }) // 15 minutes - 10 requests
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -112,7 +115,6 @@ export class FfmpegController {
     // Validate video duration for video files
     // Note: File is saved by multer to file.path when using diskStorage
     const videoFormats = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'];
-    const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
     if (fileExtension && videoFormats.includes(fileExtension) && file.path) {
       try {
         const duration = await processors.getFileDurationInSeconds(file.path);

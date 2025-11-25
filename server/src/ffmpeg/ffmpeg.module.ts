@@ -9,14 +9,9 @@ import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
+    ThrottlerModule, // Import without forRoot() since it's initialized in AppModule
     AuthModule,
     SubscriptionModule,
-    ThrottlerModule.forRoot([
-      {
-        ttl: 3600, // 1 hour
-        limit: 20, // Max limit (will be overridden by guard for free users)
-      },
-    ]),
   ],
   controllers: [FfmpegController],
   providers: [FfmpegService, StorageService, SubscriptionThrottlerGuard],

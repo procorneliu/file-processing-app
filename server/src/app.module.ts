@@ -15,8 +15,8 @@ import { SubscriptionModule } from './subscription/subscription.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => [
         {
-          ttl: Number(config.getOrThrow<string>('THROTTLE_TTL')), // 60 sec
-          limit: Number(config.getOrThrow<string>('THROTTLE_LIMIT')), // 1 request
+          ttl: Number(config.getOrThrow<string>('THROTTLE_TTL')), // 5 minutes
+          limit: Number(config.getOrThrow<string>('THROTTLE_LIMIT')), // 30 request
         },
       ],
     }),
